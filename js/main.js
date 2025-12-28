@@ -42,7 +42,7 @@ function createTaskCard(task) {
 	title.contentEditable = true;
 	title.textContent = task.title;
 	title.addEventListener("input", () => {
-		task.title = title.textContent;
+		task.title = title.textContent.trimEnd();
 		saveToStorage();
 	});
 
@@ -52,7 +52,7 @@ function createTaskCard(task) {
 	const customSelect = document.createElement("div");
 	customSelect.classList.add("custom-select", "action-btn");
 	customSelect.innerHTML = `
-    <div class="selected">Move</div>
+    <div class="default-option">Move</div>
     <ul class="options"></ul>
   `;
 
@@ -201,7 +201,7 @@ function initDragAndDrop() {
 // Initialize custom selects
 function initCustomSelects() {
 	document.querySelectorAll(".custom-select").forEach((select) => {
-		const selected = select.querySelector(".selected");
+		const defaultOption = select.querySelector(".default-option");
 		const optionsContainer = select.querySelector(".options");
 		optionsContainer.innerHTML = "";
 
@@ -214,7 +214,7 @@ function initCustomSelects() {
 		});
 
 		// Toggle dropdown
-		selected.addEventListener("click", (e) => {
+		defaultOption.addEventListener("click", (e) => {
 			e.stopPropagation();
 			document
 				.querySelectorAll(".custom-select")
@@ -259,3 +259,10 @@ document.querySelector(".btn").addEventListener("click", () => {
 // Load data and render on page load
 loadFromStorage();
 renderBoard();
+
+// Cache Storage Implementation
+if ("serviceWorker" in navigator) {
+	window.addEventListener("load", () => {
+		navigator.serviceWorker.register("./sw.js");
+	});
+}

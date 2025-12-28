@@ -1,0 +1,16 @@
+{
+	"name": "Kuic Tasks",
+	"short_name": "Kuic",
+	"description": "Simple Kanban board built with vanilla JavaScript",
+	"start_url": "./index.html",
+	"display": "standalone",
+	"background_color": "#101010",
+	"theme_color": "#101010",
+	"icons": [
+		{
+			"src": "./assets/icons/logo.png",
+			"sizes": "512x512",
+			"type": "image/png"
+		}
+	]
+}
