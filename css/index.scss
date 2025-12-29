@@ -14,9 +14,10 @@
 		font-size: 1.5rem;
 		font-weight: 600;
 		color: $primary-color;
-		font-family: "LibreBaskerville";
+		font-family: "Lora";
 		display: flex;
 		align-items: center;
+		text-transform: uppercase;
 
 		.panel-logo {
 			max-width: 60px;
@@ -80,7 +81,7 @@
 			letter-spacing: 1px;
 			margin: 0;
 			flex: 1;
-			font-family: "LibreBaskerville";
+			font-family: "Lora";
 			text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.15);
 
 			&:focus {
@@ -164,7 +165,7 @@
 	font-weight: 700;
 	text-transform: uppercase;
 	letter-spacing: 0.7px;
-	font-family: "LibreBaskerville";
+	font-family: "Lora";
 	cursor: pointer;
 	transition: 0.2s ease;
 	text-align: center;

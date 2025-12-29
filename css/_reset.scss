@@ -8,7 +8,7 @@ $bg-color: #101010;
 $light-color: #fafafa;
 $border-radius-general: 8px;
 $border-radius-rounded: 35px;
-$border-general: solid 0.5px rgba(95, 95, 95, 0.2);
+$border-general: solid 0.5px rgba(95, 95, 95, 0.4);
 
 $red-color: #e61515;
 
@@ -16,19 +16,24 @@ $red-color: #e61515;
    TYPOGRAPHY
 ===================== */
 @font-face {
-	font-family: "LibreBaskerville";
-	src: url("../typography/LibreBaskerville-Bold.ttf") format("truetype");
+	font-family: "Lora";
+	src: url("../typography/Lora-Bold.ttf") format("truetype");
 	font-weight: 600;
 }
 @font-face {
-	font-family: "LibreBaskerville";
-	src: url("../typography/LibreBaskerville-Regular.ttf") format("truetype");
+	font-family: "Lora";
+	src: url("../typography/Lora-Regular.ttf") format("truetype");
 	font-weight: 400;
 }
 @font-face {
 	font-family: "GoogleSans";
 	src: url("../typography/GoogleSans-Regular.ttf") format("truetype");
 	font-weight: 400;
+}
+@font-face {
+	font-family: "GoogleSans";
+	src: url("../typography/GoogleSans-Bold.ttf") format("truetype");
+	font-weight: 600;
 }
 
 /* =====================
@@ -176,7 +181,7 @@ section {
 	color: $light-color;
 	text-transform: uppercase;
 	font-size: 2rem;
-	font-family: "LibreBaskerville", sans-serif;
+	font-family: "Lora", sans-serif;
 	letter-spacing: 2px;
 	width: 100%;
 	text-align: center;
