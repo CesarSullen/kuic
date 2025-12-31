@@ -200,7 +200,7 @@ section {
   margin: 0 auto;
 }
 .panel-header .panel-title {
-  font-size: 1.5rem;
+  font-size: 3rem;
   font-weight: 600;
   color: #fefe14;
   font-family: "Lora";
@@ -217,9 +217,36 @@ section {
     padding: 1rem 2rem;
     flex-direction: row;
   }
-  .panel-header .panel-title {
-    font-size: 1.8rem;
+}
+.panel-header .task-stats {
+  display: flex;
+  gap: 1rem;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.1);
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+}
+.panel-header .task-stat {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  height: 100%;
+  gap: 0.2rem;
+  padding: 0.5rem 0.75rem;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+  background-color: #2b2727;
+  border-radius: 8px;
+  border: solid 0.5px rgba(95, 95, 95, 0.4);
+  text-wrap: nowrap;
+}
+@media screen and (min-width: 700px) {
+  .panel-header .task-stat {
+    max-width: 180px;
   }
+}
+.panel-header .stat-icon {
+  max-width: 28px;
 }
 
 .kanban-board {
@@ -306,14 +333,20 @@ section {
   background-color: #2b2727;
   transition: 0.2s;
   user-select: none;
+  opacity: 1;
+  transform: translateY(0) scale(1);
+  transition: all 0.35s ease;
+}
+.task-card.is-new {
+  opacity: 0;
+  transform: translateY(-20px) scale(0.5);
 }
 .task-card.completed .task-title {
   text-decoration: line-through;
   opacity: 0.6;
 }
 .task-card.completed .complete-btn {
-  color: #fefe14;
-  background: rgba(254, 254, 20, 0.2);
+  opacity: 0.5;
 }
 @media screen and (min-width: 700px) {
   .task-card:active {
@@ -355,8 +388,8 @@ section {
   transform: scale(0.98);
 }
 .action-btn.complete-btn {
-  color: hsl(117, 83%, 49%);
-  background: hsla(117, 83%, 49%, 0.2);
+  color: hsl(0, 0%, 0%);
+  background: #fafafa;
 }
 .action-btn.delete-btn {
   color: hsl(0, 83%, 49%);
