@@ -1,3 +1,36 @@
+// Detect user language
+const userLang = navigator.language || navigator.userLanguage;
+const lang = userLang.slice(0, 2); // "es" or "en"
+
+// i18n dictionary
+const i18n = {
+	en: {
+		newColumn: "New list",
+		pendingTasks: "Pending",
+		completedTasks: "Completed",
+		deleteColumn:
+			"Delete this column? Tasks will be moved to the first column.",
+		newTask: "New Task",
+		complete: "Complete",
+		delete: "Delete",
+		completed: "Completed",
+	},
+	es: {
+		newColumn: "Nueva lista",
+		pendingTasks: "Pendientes",
+		completedTasks: "Completadas",
+		deleteColumn:
+			"¿Eliminar esta columna? Las tareas se moverán a la primera columna.",
+		newTask: "Nueva tarea",
+		complete: "Completar",
+		delete: "Eliminar",
+		completed: "Completada",
+	},
+};
+
+// Select texts for current language
+const texts = i18n[lang] || i18n.en;
+
 // Data structures for columns and tasks
 let columnList = [
 	{ id: "pending", name: "PENDING" },
@@ -26,18 +59,41 @@ let taskList = [
 	},
 ];
 
+let lastCreatedTaskId = null;
+
+// Update task counters
+function updateTaskCounters() {
+	const pendingCount = taskList.filter((t) => !t.completed).length;
+	const completedCount = taskList.filter((t) => t.completed).length;
+
+	const pendingEl = document.querySelector(".tasks-pending");
+	const completedEl = document.querySelector(".tasks-completed");
+
+	if (pendingEl)
+		pendingEl.textContent = `${texts.pendingTasks}: ${pendingCount}`;
+	if (completedEl)
+		completedEl.textContent = `${texts.completedTasks}: ${completedCount}`;
+}
+
+// Update static HTML buttons with current language
+window.addEventListener("load", () => {
+	const newColumnBtn = document.querySelector(".btn");
+	if (newColumnBtn) {
+		newColumnBtn.textContent = texts.newColumn;
+	}
+});
+
 // Generate unique IDs
 function generateId(prefix = "id") {
 	return `${prefix}-${Date.now()}`;
 }
 
-// Save data to localStorage
+// Save/load data to localStorage
 function saveToStorage() {
 	localStorage.setItem("columns", JSON.stringify(columnList));
 	localStorage.setItem("tasks", JSON.stringify(taskList));
 }
 
-// Load data from localStorage
 function loadFromStorage() {
 	const savedColumns = localStorage.getItem("columns");
 	const savedTasks = localStorage.getItem("tasks");
@@ -48,7 +104,6 @@ function loadFromStorage() {
 // Reorder tasks when toggling completed state
 function reorderTasks(task) {
 	taskList = taskList.filter((t) => t.id !== task.id);
-
 	if (task.completed) {
 		taskList.push(task);
 	} else {
@@ -68,11 +123,7 @@ function createTaskCard(task) {
 	card.dataset.taskId = task.id;
 	card.draggable = true;
 
-	if (task.completed) {
-		card.classList.add("completed");
-	} else {
-		card.classList.remove("completed");
-	}
+	if (task.completed) card.classList.add("completed");
 
 	const title = document.createElement("p");
 	title.classList.add("task-title");
@@ -86,28 +137,42 @@ function createTaskCard(task) {
 	const actionRow = document.createElement("div");
 	actionRow.classList.add("action-row");
 
+	// Complete button
 	const completeBtn = document.createElement("button");
 	completeBtn.classList.add("action-btn", "complete-btn");
-	completeBtn.textContent = task.completed ? "Completed" : "Complete";
+
+	if (task.completed) {
+		card.classList.add("completed");
+		completeBtn.textContent = texts.completed;
+	} else {
+		card.classList.remove("completed");
+		completeBtn.textContent = texts.complete;
+	}
 
 	completeBtn.addEventListener("click", () => {
 		task.completed = !task.completed;
-
 		reorderTasks(task);
 		saveToStorage();
 		renderBoard();
 	});
 
+	// Delete button
 	const deleteBtn = document.createElement("button");
 	deleteBtn.classList.add("action-btn", "delete-btn");
-	deleteBtn.textContent = "Delete";
+	deleteBtn.textContent = `${texts.delete}`;
 	deleteBtn.addEventListener("click", () => {
 		taskList = taskList.filter((t) => t.id !== task.id);
 		renderBoard();
 		saveToStorage();
 	});
 
-	if (task.completed) card.classList.add("completed");
+	// New task animation
+	if (task.id === lastCreatedTaskId) {
+		card.classList.add("is-new");
+		requestAnimationFrame(() => {
+			card.classList.remove("is-new");
+		});
+	}
 
 	actionRow.append(completeBtn, deleteBtn);
 	card.append(title, actionRow);
@@ -118,26 +183,27 @@ function createTaskCard(task) {
 function addTaskToColumn(columnId) {
 	const newTask = {
 		id: generateId("task"),
-		title: "New Task",
+		title: texts.newTask,
 		columnId: columnId,
 		completed: false,
 	};
+
 	taskList.push(newTask);
+	lastCreatedTaskId = newTask.id;
+
 	renderBoard();
 	saveToStorage();
 }
 
 // Delete a column
 function deleteColumn(columnId) {
-	if (confirm("Delete this column? Tasks will be moved to the first column.")) {
-		// Move tasks to the first column
+	if (confirm(texts.deleteColumn)) {
 		const firstColumnId = columnList[0]?.id;
 		if (firstColumnId) {
 			taskList.forEach((task) => {
 				if (task.columnId === columnId) task.columnId = firstColumnId;
 			});
 		} else {
-			// If no other columns, delete tasks
 			taskList = taskList.filter((task) => task.columnId !== columnId);
 		}
 		columnList = columnList.filter((col) => col.id !== columnId);
@@ -146,7 +212,7 @@ function deleteColumn(columnId) {
 	}
 }
 
-// Function to render the entire board
+// Render the board
 function renderBoard() {
 	const board = document.querySelector(".kanban-board");
 	board.innerHTML = "";
@@ -163,7 +229,7 @@ function renderBoard() {
 		title.contentEditable = true;
 		title.textContent = column.name;
 		title.addEventListener("input", () => {
-			column.name = title.textContent;
+			column.name = title.textContent.trimEnd();
 			saveToStorage();
 		});
 
@@ -183,50 +249,64 @@ function renderBoard() {
 		body.classList.add("column-body");
 		body.dataset.columnId = column.id;
 
-		// Add tasks to this column
 		taskList
 			.filter((task) => task.columnId === column.id)
-			.forEach((task) => {
-				body.appendChild(createTaskCard(task));
-			});
+			.forEach((task) => body.appendChild(createTaskCard(task)));
 
 		section.append(header, body);
 		board.appendChild(section);
-	});
 
-	// Initialize drag and drop
+		// Focus newly created task
+		if (lastCreatedTaskId) {
+			requestAnimationFrame(() => {
+				const titleEl = document.querySelector(
+					`.task-card[data-task-id="${lastCreatedTaskId}"] .task-title`
+				);
+				if (!titleEl) return;
+
+				titleEl.scrollIntoView({ behavior: "smooth", block: "center" });
+				titleEl.focus({ preventScroll: true });
+
+				const range = document.createRange();
+				range.selectNodeContents(titleEl);
+				range.collapse(false);
+
+				const selection = window.getSelection();
+				selection.removeAllRanges();
+				selection.addRange(range);
+
+				lastCreatedTaskId = null;
+			});
+		}
+	});
+	updateTaskCounters();
 	initDragAndDrop();
 }
 
-// Function to initialize drag and drop events
+// Drag and drop
 function initDragAndDrop() {
 	const columns = document.querySelectorAll(".column-body");
 	let draggedCard = null;
 
-	// Make cards draggable
 	document.querySelectorAll(".task-card").forEach((card) => {
 		card.addEventListener("dragstart", () => {
 			draggedCard = card;
 			card.style.opacity = "0.5";
 		});
-
 		card.addEventListener("dragend", () => {
 			draggedCard = null;
 			card.style.opacity = "1";
 		});
 	});
 
-	// Column events
 	columns.forEach((column) => {
 		column.addEventListener("dragover", (e) => {
 			e.preventDefault();
 			column.style.background = "rgba(255, 255, 255, 0.1)";
 		});
-
 		column.addEventListener("dragleave", () => {
 			column.style.background = "transparent";
 		});
-
 		column.addEventListener("drop", () => {
 			if (!draggedCard) return;
 			const newColumnId = column.dataset.columnId;
@@ -245,7 +325,7 @@ function initDragAndDrop() {
 // Event for adding new column
 document.querySelector(".btn").addEventListener("click", () => {
 	const newId = generateId("col");
-	const newName = prompt("Type the name for your new column:") || "New Column";
+	const newName = prompt(texts.newColumn) || texts.newColumn;
 	columnList.push({ id: newId, name: newName });
 	renderBoard();
 	saveToStorage();

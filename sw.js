@@ -1,4 +1,4 @@
-const CACHE_NAME = "kanban-static-v2";
+const CACHE_NAME = "kanban-static-v3.1";
 const STATIC_ASSETS = [
 	"./",
 	"./index.html",
@@ -7,6 +7,8 @@ const STATIC_ASSETS = [
 	"./manifest.json",
 	"./assets/icons/logo-no-bg.png",
 	"./assets/icons/plus.svg",
+	"./assets/icons/clock-countdown-fill.svg",
+	"./assets/icons/check-circle-fill.svg",
 	"./assets/icons/trash.svg",
 ];
 
