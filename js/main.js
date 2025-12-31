@@ -6,9 +6,24 @@ let columnList = [
 ];
 
 let taskList = [
-	{ id: "task1", title: "Review Q4 budget report", columnId: "pending" },
-	{ id: "task2", title: "Design new landing page", columnId: "inprogress" },
-	{ id: "task3", title: "Launch email campaign", columnId: "completed" },
+	{
+		id: "task1",
+		title: "Review Q4 budget report",
+		columnId: "pending",
+		completed: false,
+	},
+	{
+		id: "task2",
+		title: "Design new landing page",
+		columnId: "inprogress",
+		completed: false,
+	},
+	{
+		id: "task3",
+		title: "Launch email campaign",
+		columnId: "completed",
+		completed: true,
+	},
 ];
 
 // Generate unique IDs
@@ -30,12 +45,34 @@ function loadFromStorage() {
 	if (savedTasks) taskList = JSON.parse(savedTasks);
 }
 
+// Reorder tasks when toggling completed state
+function reorderTasks(task) {
+	taskList = taskList.filter((t) => t.id !== task.id);
+
+	if (task.completed) {
+		taskList.push(task);
+	} else {
+		const index = taskList.findIndex((t) => t.columnId === task.columnId);
+		if (index === -1) {
+			taskList.push(task);
+		} else {
+			taskList.splice(index, 0, task);
+		}
+	}
+}
+
 // Create a task card element
 function createTaskCard(task) {
 	const card = document.createElement("div");
 	card.classList.add("task-card", task.columnId);
 	card.dataset.taskId = task.id;
 	card.draggable = true;
+
+	if (task.completed) {
+		card.classList.add("completed");
+	} else {
+		card.classList.remove("completed");
+	}
 
 	const title = document.createElement("p");
 	title.classList.add("task-title");
@@ -49,15 +86,20 @@ function createTaskCard(task) {
 	const actionRow = document.createElement("div");
 	actionRow.classList.add("action-row");
 
-	const customSelect = document.createElement("div");
-	customSelect.classList.add("custom-select", "action-btn");
-	customSelect.innerHTML = `
-    <div class="default-option">Move</div>
-    <ul class="options"></ul>
-  `;
+	const completeBtn = document.createElement("button");
+	completeBtn.classList.add("action-btn", "complete-btn");
+	completeBtn.textContent = task.completed ? "Completed" : "Complete";
+
+	completeBtn.addEventListener("click", () => {
+		task.completed = !task.completed;
+
+		reorderTasks(task);
+		saveToStorage();
+		renderBoard();
+	});
 
 	const deleteBtn = document.createElement("button");
-	deleteBtn.classList.add("action-btn");
+	deleteBtn.classList.add("action-btn", "delete-btn");
 	deleteBtn.textContent = "Delete";
 	deleteBtn.addEventListener("click", () => {
 		taskList = taskList.filter((t) => t.id !== task.id);
@@ -65,7 +107,9 @@ function createTaskCard(task) {
 		saveToStorage();
 	});
 
-	actionRow.append(customSelect, deleteBtn);
+	if (task.completed) card.classList.add("completed");
+
+	actionRow.append(completeBtn, deleteBtn);
 	card.append(title, actionRow);
 	return card;
 }
@@ -76,6 +120,7 @@ function addTaskToColumn(columnId) {
 		id: generateId("task"),
 		title: "New Task",
 		columnId: columnId,
+		completed: false,
 	};
 	taskList.push(newTask);
 	renderBoard();
@@ -149,9 +194,8 @@ function renderBoard() {
 		board.appendChild(section);
 	});
 
-	// Initialize drag and drop and custom selects after rendering
+	// Initialize drag and drop
 	initDragAndDrop();
-	initCustomSelects();
 }
 
 // Function to initialize drag and drop events
@@ -195,55 +239,6 @@ function initDragAndDrop() {
 			}
 			column.style.background = "transparent";
 		});
-	});
-}
-
-// Initialize custom selects
-function initCustomSelects() {
-	document.querySelectorAll(".custom-select").forEach((select) => {
-		const defaultOption = select.querySelector(".default-option");
-		const optionsContainer = select.querySelector(".options");
-		optionsContainer.innerHTML = "";
-
-		// Populate options dynamically from columnList
-		columnList.forEach((column) => {
-			const option = document.createElement("li");
-			option.dataset.value = column.id;
-			option.textContent = column.name;
-			optionsContainer.appendChild(option);
-		});
-
-		// Toggle dropdown
-		defaultOption.addEventListener("click", (e) => {
-			e.stopPropagation();
-			document
-				.querySelectorAll(".custom-select")
-				.forEach((el) => el.classList.remove("open"));
-			select.classList.toggle("open");
-		});
-
-		// Handle option click
-		optionsContainer.querySelectorAll("li").forEach((option) => {
-			option.addEventListener("click", () => {
-				const value = option.dataset.value;
-				select.classList.remove("open");
-				const card = select.closest(".task-card");
-				const taskId = card.dataset.taskId;
-				const task = taskList.find((t) => t.id === taskId);
-				if (task) {
-					task.columnId = value;
-					renderBoard();
-					saveToStorage();
-				}
-			});
-		});
-	});
-
-	// Close dropdowns on outside click
-	document.addEventListener("click", () => {
-		document
-			.querySelectorAll(".custom-select")
-			.forEach((el) => el.classList.remove("open"));
 	});
 }
 

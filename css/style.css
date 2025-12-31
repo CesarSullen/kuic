@@ -209,7 +209,8 @@ section {
   text-transform: uppercase;
 }
 .panel-header .panel-title .panel-logo {
-  max-width: 60px;
+  max-width: 50px;
+  margin-right: 5px;
 }
 @media screen and (min-width: 700px) {
   .panel-header {
@@ -306,6 +307,14 @@ section {
   transition: 0.2s;
   user-select: none;
 }
+.task-card.completed .task-title {
+  text-decoration: line-through;
+  opacity: 0.6;
+}
+.task-card.completed .complete-btn {
+  color: #fefe14;
+  background: rgba(254, 254, 20, 0.2);
+}
 @media screen and (min-width: 700px) {
   .task-card:active {
     cursor: grabbing;
@@ -330,53 +339,7 @@ section {
   align-items: stretch;
 }
 
-.custom-select {
-  position: relative;
-  flex: 1;
-  user-select: none;
-  text-wrap: nowrap;
-  padding: 0.5rem 0.75rem;
-  border-radius: 8px;
-  background: #fafafa;
-  color: black;
-  font-size: 0.9rem;
-  font-weight: 700;
-  text-transform: uppercase;
-  letter-spacing: 0.7px;
-  font-family: "Lora";
-  cursor: pointer;
-  transition: 0.2s ease;
-  text-align: center;
-}
-.custom-select .options {
-  display: none;
-  position: absolute;
-  top: calc(100% + 0.25rem);
-  left: 0;
-  width: 100%;
-  background: #2b2727;
-  border-radius: 8px;
-  box-shadow: 0 5px 10px rgba(0, 0, 0, 0.1);
-  z-index: 1000;
-  overflow: hidden;
-}
-.custom-select .options li {
-  padding: 0.5rem;
-  cursor: pointer;
-  color: #fafafa;
-  font-size: 0.9rem;
-  font-weight: 600;
-  text-align: center;
-  transition: 0.2s;
-}
-.custom-select .options li:hover {
-  background: rgba(250, 250, 250, 0.2);
-}
-.custom-select.open .options {
-  display: block;
-}
-
-button.action-btn {
+.action-btn {
   flex: 1;
   padding: 0.5rem 0.75rem;
   border-radius: 8px;
@@ -387,11 +350,17 @@ button.action-btn {
   text-transform: uppercase;
   letter-spacing: 0.7px;
   transition: 0.2s;
-  color: #e61515;
-  background: rgba(230, 21, 21, 0.2);
 }
-button.action-btn:hover {
+.action-btn:hover {
   transform: scale(0.98);
+}
+.action-btn.complete-btn {
+  color: hsl(117, 83%, 49%);
+  background: hsla(117, 83%, 49%, 0.2);
+}
+.action-btn.delete-btn {
+  color: hsl(0, 83%, 49%);
+  background: hsla(0, 83%, 49%, 0.2);
 }
 
 /*# sourceMappingURL=style.css.map */

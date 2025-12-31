@@ -1,4 +1,4 @@
-const CACHE_NAME = "kanban-static-v1";
+const CACHE_NAME = "kanban-static-v2";
 const STATIC_ASSETS = [
 	"./",
 	"./index.html",
@@ -12,6 +12,7 @@ const STATIC_ASSETS = [
 
 // Install: precache
 self.addEventListener("install", (event) => {
+	self.skipWaiting();
 	event.waitUntil(
 		caches.open(CACHE_NAME).then((cache) => {
 			return cache.addAll(STATIC_ASSETS);

@@ -20,7 +20,8 @@
 		text-transform: uppercase;
 
 		.panel-logo {
-			max-width: 60px;
+			max-width: 50px;
+			margin-right: 5px;
 		}
 	}
 
@@ -123,6 +124,18 @@
 	transition: 0.2s;
 	user-select: none;
 
+	&.completed {
+		.task-title {
+			text-decoration: line-through;
+			opacity: 0.6;
+		}
+
+		.complete-btn {
+			color: $primary-color;
+			background: rgba($primary-color, 0.2);
+		}
+	}
+
 	@media screen and (min-width: 700px) {
 		&:active {
 			cursor: grabbing;
@@ -151,58 +164,7 @@
 	}
 }
 
-.custom-select {
-	position: relative;
-	flex: 1;
-	user-select: none;
-	text-wrap: nowrap;
-
-	padding: 0.5rem 0.75rem;
-	border-radius: $border-radius-general;
-	background: $light-color;
-	color: black;
-	font-size: 0.9rem;
-	font-weight: 700;
-	text-transform: uppercase;
-	letter-spacing: 0.7px;
-	font-family: "Lora";
-	cursor: pointer;
-	transition: 0.2s ease;
-	text-align: center;
-
-	.options {
-		display: none;
-		position: absolute;
-		top: calc(100% + 0.25rem);
-		left: 0;
-		width: 100%;
-		background: $dark-color;
-		border-radius: $border-radius-general;
-		box-shadow: 0 5px 10px rgba(0, 0, 0, 0.1);
-		z-index: 1000;
-		overflow: hidden;
-
-		li {
-			padding: 0.5rem;
-			cursor: pointer;
-			color: $light-color;
-			font-size: 0.9rem;
-			font-weight: 600;
-			text-align: center;
-			transition: 0.2s;
-
-			&:hover {
-				background: rgba($light-color, 0.2);
-			}
-		}
-	}
-
-	&.open .options {
-		display: block;
-	}
-}
-
-button.action-btn {
+.action-btn {
 	flex: 1;
 	padding: 0.5rem 0.75rem;
 	border-radius: $border-radius-general;
@@ -213,10 +175,18 @@ button.action-btn {
 	text-transform: uppercase;
 	letter-spacing: 0.7px;
 	transition: 0.2s;
-	color: $red-color;
-	background: rgba($red-color, 0.2);
 
 	&:hover {
 		transform: scale(0.98);
+	}
+
+	&.complete-btn {
+		color: hsl(117, 83%, 49%);
+		background: hsla(117, 83%, 49%, 0.2);
+	}
+
+	&.delete-btn {
+		color: hsl(0, 83%, 49%);
+		background: hsla(0, 83%, 49%, 0.2);
 	}
 }
