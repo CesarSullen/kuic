@@ -1,5 +1,5 @@
-const CACHE_NAME = "kanban-static-v4.1";
-const DATA_CACHE_NAME = "kanban-data-v1";
+const CACHE_NAME = "kanban-static-v4";
+const DATA_CACHE_NAME = "kanban-data-v2";
 
 const STATIC_ASSETS = [
 	"./",
@@ -60,15 +60,31 @@ self.addEventListener("fetch", (event) => {
 	);
 });
 
-// === DEADLINE NOTIFICATIONS ===
-
-// Receive updated task list from main thread
+// Receive updated task list from main
 self.addEventListener("message", async (event) => {
 	if (event.data && event.data.type === "SYNC_TASKS") {
 		const cache = await caches.open(DATA_CACHE_NAME);
+
+		const existingResponse = await cache.match("./tasks-data");
+		let existingTasks = [];
+
+		if (existingResponse) {
+			const existingData = await existingResponse.json();
+			existingTasks = existingData.tasks || [];
+		}
+
+		// Merge tasks
+		const mergedTasks = event.data.tasks.map((task) => {
+			const cachedTask = existingTasks.find((t) => t.id === task.id);
+			if (cachedTask && cachedTask.notified) {
+				return { ...task, notified: true };
+			}
+			return task;
+		});
+
 		await cache.put(
-			"../tasks-data",
-			new Response(JSON.stringify({ tasks: event.data.tasks }))
+			"./tasks-data",
+			new Response(JSON.stringify({ tasks: mergedTasks }))
 		);
 	}
 });
@@ -80,58 +96,39 @@ setInterval(async () => {
 		const response = await cache.match("./tasks-data");
 		if (!response) return;
 
-		let { tasks } = await response.json();
+		const fullData = await response.json();
+		const tasks = fullData.tasks;
 		const now = Date.now();
-
-		// Detect user language
-		let language = "en";
-		const clients = await self.clients.matchAll();
-		if (clients.length > 0) {
-			language = clients[0]?.navigator?.language?.slice(0, 2) || "en";
-		}
-		const isSpanish = language === "es";
 
 		let updated = false;
 
-		tasks = tasks.filter(
-			(task) => task && task.deadline && !task.completed && !task.notified
-		);
-
+		// Loop through all tasks and notify if deadline reached
 		for (const task of tasks) {
-			if (new Date(task.deadline).getTime() <= now) {
-				try {
-					await self.registration.showNotification(
-						isSpanish ? "¡Tarea vencida!" : "Task overdue!",
-						{
+			if (task && task.deadline && !task.completed && !task.notified) {
+				if (new Date(task.deadline).getTime() <= now) {
+					try {
+						await self.registration.showNotification("Kuic Tasks", {
 							body: task.title,
 							icon: "./assets/icons/logo-no-bg.png",
 							badge: "./assets/icons/logo-no-bg.png",
 							tag: `task-${task.id}`,
 							renotify: false,
-							requireInteraction: false,
-						}
-					);
+							requireInteraction: true,
+						});
 
-					task.notified = true;
-					updated = true;
-				} catch (notifyErr) {
-					// Notification skipped silently (normal when no tab is open)
-					// No action needed
+						task.notified = true;
+						updated = true;
+					} catch (notifyErr) {
+						// Notification skipped silently (normal when no tab is open)
+						// No action needed
+					}
 				}
 			}
 		}
 
+		// Save all tasks back to cache if any were updated
 		if (updated) {
-			const fullResponse = await cache.match("./tasks-data");
-			if (fullResponse) {
-				const fullData = await fullResponse.json();
-				fullData.tasks = fullData.tasks.map((t) => {
-					const notifiedTask = tasks.find((nt) => nt.id === t.id);
-					if (notifiedTask) return notifiedTask;
-					return t;
-				});
-				await cache.put("./tasks-data", new Response(JSON.stringify(fullData)));
-			}
+			await cache.put("./tasks-data", new Response(JSON.stringify({ tasks })));
 		}
 	} catch (err) {
 		console.error("Error checking deadlines:", err);

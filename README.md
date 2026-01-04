@@ -32,3 +32,9 @@ No information is sent to any external server.
 - Service Worker for PWA
 - Local Storage for data persistence
 - Cache Storage for offline-first
+
+# Try KUIC
+
+You can try the application at the following link: [cesarsullen.github.io/kuic](https://cesarsullen.github.io/kuic).
+
+I hope you enjoy! <3
