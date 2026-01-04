@@ -8,23 +8,24 @@ const i18n = {
 		newColumn: "New list",
 		pendingTasks: "Pending",
 		completedTasks: "Completed",
-		deleteColumn:
-			"Delete this column? Tasks will be moved to the first column.",
+		deleteColumn: "Delete this column? Tasks will be permanently deleted.",
 		newTask: "New Task",
 		complete: "Complete",
 		delete: "Delete",
 		completed: "Completed",
+		deadlinePlaceholder: "Due date (optional)",
 	},
 	es: {
 		newColumn: "Nueva lista",
 		pendingTasks: "Pendientes",
 		completedTasks: "Completadas",
 		deleteColumn:
-			"¿Eliminar esta columna? Las tareas se moverán a la primera columna.",
+			"¿Eliminar esta columna? Las tareas se eliminarán permanentemente.",
 		newTask: "Nueva tarea",
 		complete: "Completar",
 		delete: "Eliminar",
 		completed: "Completada",
+		deadlinePlaceholder: "Fecha límite (opcional)",
 	},
 };
 
@@ -44,18 +45,24 @@ let taskList = [
 		title: "Review Q4 budget report",
 		columnId: "pending",
 		completed: false,
+		deadline: "",
+		notified: false,
 	},
 	{
 		id: "task2",
 		title: "Design new landing page",
 		columnId: "inprogress",
 		completed: false,
+		deadline: "",
+		notified: false,
 	},
 	{
 		id: "task3",
 		title: "Launch email campaign",
 		columnId: "completed",
 		completed: true,
+		deadline: "",
+		notified: false,
 	},
 ];
 
@@ -73,6 +80,8 @@ function updateTaskCounters() {
 		pendingEl.textContent = `${texts.pendingTasks}: ${pendingCount}`;
 	if (completedEl)
 		completedEl.textContent = `${texts.completedTasks}: ${completedCount}`;
+
+	console.log("pending: " + pendingCount + ", completed: " + completedCount);
 }
 
 // Update static HTML buttons with current language
@@ -92,6 +101,7 @@ function generateId(prefix = "id") {
 function saveToStorage() {
 	localStorage.setItem("columns", JSON.stringify(columnList));
 	localStorage.setItem("tasks", JSON.stringify(taskList));
+	syncTasksToSW();
 }
 
 function loadFromStorage() {
@@ -134,6 +144,53 @@ function createTaskCard(task) {
 		saveToStorage();
 	});
 
+	// Deadlines
+	const deadlineInput = document.createElement("input");
+
+	deadlineInput.type = "text";
+	deadlineInput.classList.add("deadline-input");
+	deadlineInput.placeholder = texts.deadlinePlaceholder;
+
+	if (task.deadline) {
+		deadlineInput.value = task.deadline.slice(0, 16); // YYYY-MM-DDTHH:MM
+		deadlineInput.type = "datetime-local";
+	}
+
+	deadlineInput.addEventListener("focus", async () => {
+		if (deadlineInput.type !== "datetime-local") {
+			deadlineInput.type = "datetime-local";
+			deadlineInput.focus();
+		}
+
+		await notificationPermission();
+	});
+
+	deadlineInput.addEventListener("blur", () => {
+		if (!deadlineInput.value) {
+			deadlineInput.type = "text";
+		}
+	});
+
+	deadlineInput.addEventListener("change", () => {
+		if (deadlineInput.type === "datetime-local" && deadlineInput.value) {
+			task.deadline = deadlineInput.value + ":00";
+		}
+		saveToStorage();
+		renderBoard();
+	});
+
+	function updateDeadlineColor() {
+		const deadlineTime = new Date(task.deadline).getTime();
+		const now = Date.now();
+
+		if (deadlineTime < now) {
+			deadlineInput.style.color = "red";
+			deadlineInput.style.borderColor = "red";
+		}
+	}
+
+	updateDeadlineColor();
+
 	const actionRow = document.createElement("div");
 	actionRow.classList.add("action-row");
 
@@ -162,8 +219,8 @@ function createTaskCard(task) {
 	deleteBtn.textContent = `${texts.delete}`;
 	deleteBtn.addEventListener("click", () => {
 		taskList = taskList.filter((t) => t.id !== task.id);
-		renderBoard();
 		saveToStorage();
+		renderBoard();
 	});
 
 	// New task animation
@@ -175,7 +232,7 @@ function createTaskCard(task) {
 	}
 
 	actionRow.append(completeBtn, deleteBtn);
-	card.append(title, actionRow);
+	card.append(title, deadlineInput, actionRow);
 	return card;
 }
 
@@ -186,6 +243,8 @@ function addTaskToColumn(columnId) {
 		title: texts.newTask,
 		columnId: columnId,
 		completed: false,
+		deadline: "",
+		notified: false,
 	};
 
 	taskList.push(newTask);
@@ -197,19 +256,13 @@ function addTaskToColumn(columnId) {
 
 // Delete a column
 function deleteColumn(columnId) {
-	if (confirm(texts.deleteColumn)) {
-		const firstColumnId = columnList[0]?.id;
-		if (firstColumnId) {
-			taskList.forEach((task) => {
-				if (task.columnId === columnId) task.columnId = firstColumnId;
-			});
-		} else {
-			taskList = taskList.filter((task) => task.columnId !== columnId);
-		}
-		columnList = columnList.filter((col) => col.id !== columnId);
-		renderBoard();
-		saveToStorage();
-	}
+	if (!confirm(texts.deleteColumn)) return;
+
+	taskList = taskList.filter((task) => task.columnId !== columnId);
+	columnList = columnList.filter((col) => col.id !== columnId);
+
+	renderBoard();
+	saveToStorage();
 }
 
 // Render the board
@@ -331,13 +384,39 @@ document.querySelector(".btn").addEventListener("click", () => {
 	saveToStorage();
 });
 
+// Notifications
+async function notificationPermission() {
+	if (Notification.permission === "granted") {
+		return true;
+	}
+	if (Notification.permission === "denied") {
+		const permission = await Notification.requestPermission();
+		return permission === "granted";
+	}
+	if (Notification.permission === "default") {
+		const permission = await Notification.requestPermission();
+		return permission === "granted";
+	}
+	return false;
+}
+
 // Load data and render on page load
 loadFromStorage();
 renderBoard();
+syncTasksToSW();
 
-// Cache Storage Implementation
+// Service Worker Implementation
 if ("serviceWorker" in navigator) {
 	window.addEventListener("load", () => {
 		navigator.serviceWorker.register("./sw.js");
 	});
+}
+
+function syncTasksToSW() {
+	if ("serviceWorker" in navigator && navigator.serviceWorker.controller) {
+		navigator.serviceWorker.controller.postMessage({
+			type: "SYNC_TASKS",
+			tasks: taskList,
+		});
+	}
 }

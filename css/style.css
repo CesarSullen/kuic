@@ -372,6 +372,16 @@ section {
   align-items: stretch;
 }
 
+.deadline-input {
+  width: 100%;
+  padding: 6px 8px;
+  font-size: 0.9em;
+  border: solid 0.5px rgba(95, 95, 95, 0.4);
+  border-radius: 8px;
+  background: #1f1d1d;
+  color: #fafafa;
+}
+
 .action-btn {
   flex: 1;
   padding: 0.5rem 0.75rem;

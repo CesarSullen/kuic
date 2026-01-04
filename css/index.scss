@@ -200,6 +200,16 @@
 	}
 }
 
+.deadline-input {
+	width: 100%;
+	padding: 6px 8px;
+	font-size: 0.9em;
+	border: $border-general;
+	border-radius: $border-radius-general;
+	background: $secondary-color;
+	color: $light-color;
+}
+
 .action-btn {
 	flex: 1;
 	padding: 0.5rem 0.75rem;

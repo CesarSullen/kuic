@@ -1,33 +1,34 @@
-# Kanban Board PWA v1.5.0
+# Kanban Board
 
-## Descripción
+## Description
 
-Una aplicación de tareas estilo Kanban que funciona **offline**, es **privacy-first** y **local-first**.  
-Incluye soporte multilenguaje, animaciones al crear tareas y la opción de marcar tareas como completadas.
+A Kanban-style task app that works **offline**, is **privacy-first**, and **local-first**.  
+Includes multilingual support, animations when creating tasks, and the option to mark tasks as completed.
 
-## Características
+## Features
 
-- Crear, editar y eliminar columnas y tareas
-- Marcar tareas como completadas (botón "Complete"/"Completed")
-- **Contadores dinámicos** de tareas pendientes y completadas
-- Drag & drop de tareas entre columnas (PC)
-- Offline-first mediante Service Worker y Cache Storage
-- Compatible con múltiples idiomas (actualmente inglés y español)
-- Optimizado para escritorio y móvil
+- Create, edit, and delete columns and tasks
+- Mark tasks as completed (button "Complete"/"Completed")
+- **Dynamic counters** for pending and completed tasks
+- Drag & drop tasks between columns (desktop)
+- Offline-first using Service Worker and Cache Storage
+- Compatible with multiple languages (currently English and Spanish)
+- Optimized for desktop and mobile
+- Notifications for tasks with due dates
 
-### Futuras actualizaciones
+### Future updates
 
-- Feedback visual al marcar tareas completadas
-- Export / Import de tableros en JSON
+- Visual feedback when marking tasks completed
+- Export / Import boards in JSON
 
-## Privacidad y Datos
+## Privacy and Data
 
-Todos los datos se guardan **localmente** en el navegador (Local Storage y Cache Storage).  
-No se envía información a ningún servidor externo.
+All data is stored **locally** in the browser (Local Storage and Cache Storage).  
+No information is sent to any external server.
 
-## Tecnologías
+## Technologies
 
 - HTML, CSS, JavaScript
-- Service Worker para PWA
-- Local Storage para persistencia de datos
-- Cache Storage para offline-first
+- Service Worker for PWA
+- Local Storage for data persistence
+- Cache Storage for offline-first
