@@ -1,4 +1,4 @@
-const CACHE_NAME = "kanban-static-v4";
+const CACHE_NAME = "kanban-static-v5";
 const DATA_CACHE_NAME = "kanban-data-v2";
 
 const STATIC_ASSETS = [
