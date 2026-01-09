@@ -1,5 +1,5 @@
-const CACHE_NAME = "kanban-static-v5.1";
-const DATA_CACHE_NAME = "kanban-data-v2";
+const CACHE_NAME = "kanban-static-v5.3";
+const DATA_CACHE_NAME = "kanban-data-v4";
 
 const STATIC_ASSETS = [
 	"./",
@@ -24,7 +24,7 @@ self.addEventListener("install", (event) => {
 	);
 });
 
-// Activate: clean old caches
+// Activate: clean old caches and register periodic sync
 self.addEventListener("activate", (event) => {
 	event.waitUntil(
 		(async () => {
@@ -34,6 +34,18 @@ self.addEventListener("activate", (event) => {
 					.filter((k) => k !== CACHE_NAME && k !== DATA_CACHE_NAME)
 					.map((k) => caches.delete(k))
 			);
+
+			// Register periodic background sync (Chrome Android)
+			if ("periodicSync" in self.registration) {
+				try {
+					await self.registration.periodicSync.register("task-check", {
+						minInterval: 15 * 60 * 1000, // every 15 minutes
+					});
+				} catch (err) {
+					console.log("Periodic background sync failed (expected):", err);
+				}
+			}
+
 			await self.clients.claim();
 		})()
 	);
@@ -54,7 +66,7 @@ self.addEventListener("fetch", (event) => {
 							return networkResponse;
 						});
 					})
-					.catch(() => cachedResponse) // offline fallback
+					.catch(() => cachedResponse)
 			);
 		})
 	);
@@ -89,8 +101,8 @@ self.addEventListener("message", async (event) => {
 	}
 });
 
-// Check deadlines every minute
-setInterval(async () => {
+// Function to check deadlines and notify
+async function checkTaskDeadlines() {
 	try {
 		const cache = await caches.open(DATA_CACHE_NAME);
 		const response = await cache.match("./tasks-data");
@@ -102,7 +114,6 @@ setInterval(async () => {
 
 		let updated = false;
 
-		// Loop through all tasks and notify if deadline reached
 		for (const task of tasks) {
 			if (task && task.deadline && !task.completed && !task.notified) {
 				if (new Date(task.deadline).getTime() <= now) {
@@ -118,19 +129,25 @@ setInterval(async () => {
 
 						task.notified = true;
 						updated = true;
-					} catch (notifyErr) {
-						// Notification skipped silently (normal when no tab is open)
-						// No action needed
-					}
+					} catch {}
 				}
 			}
 		}
 
-		// Save all tasks back to cache if any were updated
 		if (updated) {
 			await cache.put("./tasks-data", new Response(JSON.stringify({ tasks })));
 		}
 	} catch (err) {
 		console.error("Error checking deadlines:", err);
 	}
-}, 60000);
+}
+
+// Check deadlines every minute
+setInterval(checkTaskDeadlines, 60000);
+
+// Handle periodic background sync (Chrome Android)
+self.addEventListener("periodicsync", (event) => {
+	if (event.tag === "task-check") {
+		event.waitUntil(checkTaskDeadlines());
+	}
+});

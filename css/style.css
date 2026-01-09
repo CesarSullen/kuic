@@ -345,6 +345,12 @@ section {
   text-decoration: line-through;
   opacity: 0.6;
 }
+.task-card.completed .deadline-view {
+  opacity: 0.6;
+  color: #fafafa !important;
+  border-color: #1f1d1d !important;
+  text-decoration: line-through;
+}
 .task-card.completed .complete-btn {
   opacity: 0.5;
 }
@@ -372,12 +378,36 @@ section {
   align-items: stretch;
 }
 
-.deadline-input {
-  max-width: 60%;
-  padding: 6px 8px;
-  font-size: 0.9em;
-  border: solid 0.5px rgba(95, 95, 95, 0.4);
+.deadline-wrapper {
+  display: inline-flex;
+  align-items: center;
+}
+.deadline-wrapper .deadline-view {
+  padding: 4px 6px;
+  font-size: 0.8rem;
+  border: 1px solid transparent;
   border-radius: 8px;
+  background: #1f1d1d;
+  color: #fafafa;
+  white-space: nowrap;
+  cursor: pointer;
+}
+.deadline-wrapper .deadline-view:hover {
+  border-color: rgba(255, 255, 255, 0.3);
+}
+.deadline-wrapper .deadline-view.placeholder {
+  opacity: 0.6;
+}
+.deadline-wrapper .deadline-view.expired {
+  color: red;
+  border-color: red;
+}
+.deadline-wrapper .deadline-input {
+  display: none;
+  font-size: 0.8rem;
+  padding: 4px 6px;
+  border-radius: 8px;
+  border: solid 0.5px rgba(95, 95, 95, 0.4);
   background: #1f1d1d;
   color: #fafafa;
 }
@@ -414,6 +444,7 @@ footer .footer-links {
   display: flex;
   flex-direction: column;
   align-items: center;
+  gap: 10px;
 }
 footer .footer-links a {
   color: white;

@@ -13,7 +13,7 @@ const i18n = {
 		complete: "Complete",
 		delete: "Delete",
 		completed: "Completed",
-		deadlinePlaceholder: "Due date (optional)",
+		deadlinePlaceholder: "Due date",
 	},
 	es: {
 		newColumn: "Nueva lista",
@@ -25,7 +25,7 @@ const i18n = {
 		complete: "Completar",
 		delete: "Eliminar",
 		completed: "Completada",
-		deadlinePlaceholder: "Fecha límite (opcional)",
+		deadlinePlaceholder: "Fecha límite",
 	},
 };
 
@@ -45,7 +45,7 @@ let taskList = [
 		title: "Review Q4 budget report",
 		columnId: "pending",
 		completed: false,
-		deadline: "",
+		deadline: null,
 		notified: false,
 	},
 	{
@@ -53,7 +53,7 @@ let taskList = [
 		title: "Design new landing page",
 		columnId: "inprogress",
 		completed: false,
-		deadline: "",
+		deadline: null,
 		notified: false,
 	},
 	{
@@ -61,7 +61,7 @@ let taskList = [
 		title: "Launch email campaign",
 		columnId: "completed",
 		completed: true,
-		deadline: "",
+		deadline: null,
 		notified: false,
 	},
 ];
@@ -144,52 +144,87 @@ function createTaskCard(task) {
 		saveToStorage();
 	});
 
-	// Deadlines
+	// Deadline
+	const deadlineWrapper = document.createElement("div");
+	deadlineWrapper.classList.add("deadline-wrapper");
+
+	const deadlineView = document.createElement("span");
+	deadlineView.classList.add("deadline-view");
+
 	const deadlineInput = document.createElement("input");
-
-	deadlineInput.type = "text";
+	deadlineInput.type = "datetime-local";
 	deadlineInput.classList.add("deadline-input");
-	deadlineInput.placeholder = texts.deadlinePlaceholder;
 
-	if (task.deadline) {
-		deadlineInput.value = task.deadline.slice(0, 16); // YYYY-MM-DDTHH:MM
-		deadlineInput.type = "datetime-local";
+	deadlineWrapper.append(deadlineView, deadlineInput);
+
+	function formatDeadline(dateString) {
+		if (!dateString) return "";
+
+		const date = new Date(dateString);
+
+		return new Intl.DateTimeFormat("default", {
+			// year: "numeric",
+			month: "short",
+			day: "numeric",
+			hour: "numeric",
+			minute: "2-digit",
+			hour12: true,
+		}).format(date);
 	}
 
-	deadlineInput.addEventListener("focus", async () => {
-		if (deadlineInput.type !== "datetime-local") {
-			deadlineInput.type = "datetime-local";
-			deadlineInput.focus();
+	function updateDeadlineView() {
+		deadlineView.classList.remove("placeholder", "expired");
+
+		if (!task.deadline) {
+			deadlineView.textContent = texts.deadlinePlaceholder;
+			deadlineView.classList.add("placeholder");
+			return;
+		}
+
+		deadlineView.textContent = formatDeadline(task.deadline);
+
+		const deadlineTime = new Date(task.deadline).getTime();
+		if (deadlineTime < Date.now()) {
+			deadlineView.classList.add("expired");
+		}
+	}
+
+	deadlineView.addEventListener("click", async () => {
+		deadlineView.style.display = "none";
+		deadlineInput.style.display = "inline-block";
+
+		if (task.deadline) {
+			deadlineInput.value = task.deadline.slice(0, 16);
+		} else {
+			deadlineInput.value = "";
+		}
+
+		deadlineInput.focus();
+
+		if (deadlineInput.showPicker) {
+			deadlineInput.showPicker();
 		}
 
 		await notificationPermission();
 	});
 
-	deadlineInput.addEventListener("blur", () => {
-		if (!deadlineInput.value) {
-			deadlineInput.type = "text";
-		}
-	});
-
 	deadlineInput.addEventListener("change", () => {
-		if (deadlineInput.type === "datetime-local" && deadlineInput.value) {
+		if (deadlineInput.value) {
 			task.deadline = deadlineInput.value + ":00";
+		} else {
+			task.deadline = null;
 		}
+
 		saveToStorage();
 		renderBoard();
 	});
 
-	function updateDeadlineColor() {
-		const deadlineTime = new Date(task.deadline).getTime();
-		const now = Date.now();
+	deadlineInput.addEventListener("blur", () => {
+		deadlineInput.style.display = "none";
+		deadlineView.style.display = "inline-block";
+	});
 
-		if (deadlineTime < now) {
-			deadlineInput.style.color = "red";
-			deadlineInput.style.borderColor = "red";
-		}
-	}
-
-	updateDeadlineColor();
+	updateDeadlineView();
 
 	const actionRow = document.createElement("div");
 	actionRow.classList.add("action-row");
@@ -232,7 +267,7 @@ function createTaskCard(task) {
 	}
 
 	actionRow.append(completeBtn, deleteBtn);
-	card.append(title, deadlineInput, actionRow);
+	card.append(title, deadlineWrapper, actionRow);
 	return card;
 }
 

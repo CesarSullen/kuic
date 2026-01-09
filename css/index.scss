@@ -167,6 +167,14 @@
 			text-decoration: line-through;
 			opacity: 0.6;
 		}
+
+		.deadline-view {
+			opacity: 0.6;
+			color: $light-color !important;
+			border-color: $secondary-color !important;
+			text-decoration: line-through;
+		}
+
 		.complete-btn {
 			opacity: 0.5;
 		}
@@ -200,14 +208,43 @@
 	}
 }
 
-.deadline-input {
-	max-width: 60%;
-	padding: 6px 8px;
-	font-size: 0.9em;
-	border: $border-general;
-	border-radius: $border-radius-general;
-	background: $secondary-color;
-	color: $light-color;
+.deadline-wrapper {
+	display: inline-flex;
+	align-items: center;
+
+	.deadline-view {
+		padding: 4px 6px;
+		font-size: 0.8rem;
+		border: 1px solid transparent;
+		border-radius: $border-radius-general;
+		background: $secondary-color;
+		color: $light-color;
+		white-space: nowrap;
+		cursor: pointer;
+
+		&:hover {
+			border-color: rgba(255, 255, 255, 0.3);
+		}
+
+		&.placeholder {
+			opacity: 0.6;
+		}
+
+		&.expired {
+			color: red;
+			border-color: red;
+		}
+	}
+
+	.deadline-input {
+		display: none;
+		font-size: 0.8rem;
+		padding: 4px 6px;
+		border-radius: $border-radius-general;
+		border: $border-general;
+		background: $secondary-color;
+		color: $light-color;
+	}
 }
 
 .action-btn {
@@ -246,6 +283,7 @@ footer {
 		display: flex;
 		flex-direction: column;
 		align-items: center;
+		gap: 10px;
 
 		a {
 			color: white;

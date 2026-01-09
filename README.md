@@ -18,7 +18,6 @@ Includes multilingual support, animations when creating tasks, and the option to
 
 ### Future updates
 
-- Visual feedback when marking tasks completed
 - Export / Import boards in JSON
 
 ## Privacy and Data
