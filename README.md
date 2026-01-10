@@ -10,15 +10,12 @@ Includes multilingual support, animations when creating tasks, and the option to
 - Create, edit, and delete columns and tasks
 - Mark tasks as completed (button "Complete"/"Completed")
 - **Dynamic counters** for pending and completed tasks
+- Import / Export data in JSON format
 - Drag & drop tasks between columns (desktop)
 - Offline-first using Service Worker and Cache Storage
 - Compatible with multiple languages (currently English and Spanish)
 - Optimized for desktop and mobile
 - Notifications for tasks with due dates
-
-### Future updates
-
-- Export / Import boards in JSON
 
 ## Privacy and Data
 

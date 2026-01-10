@@ -30,7 +30,7 @@
 			<div class="task-stats">
 				<div class="task-stat">
 					<img
-						class="stat-icon"
+						class="btn-icon"
 						src="./assets/icons/clock-countdown-fill.svg"
 						alt=""
 						srcset=""
@@ -39,7 +39,7 @@
 				</div>
 				<div class="task-stat">
 					<img
-						class="stat-icon"
+						class="btn-icon"
 						src="./assets/icons/check-circle-fill.svg"
 						alt=""
 						srcset=""
@@ -47,11 +47,29 @@
 					<span class="tasks-completed">Completed: 0</span>
 				</div>
 			</div>
-			<button class="btn">+ New list</button>
+			<button class="btn" id="newColumnBtn">+ New list</button>
 		</header>
+
+		<input
+			type="file"
+			id="fileInput"
+			style="display: none"
+			accept="application/json"
+			onchange="importTasks(event)"
+		/>
 
 		<main class="kanban-board"></main>
 
+		<div class="data-buttons">
+			<button class="data-btn" id="importBtn">
+				<img src="./assets/icons/cloud-arrow-down-fill.svg" class="btn-icon" />
+				<span id="importBtnText">Import</span>
+			</button>
+			<button onclick="exportTasks()" class="data-btn">
+				<img src="./assets/icons/cloud-arrow-up-fill.svg" class="btn-icon" />
+				<span id="exportBtnText">Export</span>
+			</button>
+		</div>
 		<footer>
 			<div class="footer-content">
 				<nav class="footer-links">

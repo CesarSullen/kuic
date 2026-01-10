@@ -29,38 +29,51 @@
 		padding: 1rem 2rem;
 		flex-direction: row;
 	}
+}
+.task-stats,
+.data-buttons {
+	display: flex;
+	gap: 0.5rem;
+	box-shadow: 0 2px 6px rgba(0, 0, 0, 0.1);
+	align-items: center;
+	justify-content: center;
+}
 
-	.task-stats {
-		display: flex;
-		gap: 1rem;
-		box-shadow: 0 2px 6px rgba(0, 0, 0, 0.1);
-		align-items: center;
-		justify-content: center;
-		width: 100%;
+.data-buttons {
+	padding: 1rem;
+}
+
+.task-stat,
+.data-btn {
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	width: 100%;
+	height: 100%;
+	gap: 0.2rem;
+	padding: 0.5rem 0.75rem;
+	box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+	background-color: $dark-color;
+	border-radius: $border-radius-general;
+	border: $border-general;
+	text-wrap: nowrap;
+	color: #fafafa;
+	font-size: 0.9rem;
+	letter-spacing: 1.2px;
+
+	@media screen and (min-width: 700px) {
+		max-width: 180px;
 	}
+}
 
-	.task-stat {
-		display: flex;
-		align-items: center;
-		justify-content: center;
-		width: 100%;
-		height: 100%;
-		gap: 0.2rem;
-		padding: 0.5rem 0.75rem;
-		box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
-		background-color: $dark-color;
-		border-radius: $border-radius-general;
-		border: $border-general;
-		text-wrap: nowrap;
+.data-btn {
+	cursor: pointer;
+	text-transform: uppercase;
+	font-weight: 600;
+}
 
-		@media screen and (min-width: 700px) {
-			max-width: 180px;
-		}
-	}
-
-	.stat-icon {
-		max-width: 28px;
-	}
+.btn-icon {
+	max-width: 28px;
 }
 
 .kanban-board {

@@ -1,30 +1,40 @@
-const CACHE_NAME = "kanban-static-v5.3";
-const DATA_CACHE_NAME = "kanban-data-v4";
+const CACHE_NAME = "kanban-static-v6";
+const DATA_CACHE_NAME = "kanban-data-v5";
 
 const STATIC_ASSETS = [
+	// Page
 	"./",
 	"./index.html",
 	"./css/style.css",
 	"./js/main.js",
 	"./manifest.json",
+
+	// Assets
+	"./assets/icons/logo.png",
 	"./assets/icons/logo-no-bg.png",
-	"./assets/icons/plus.svg",
 	"./assets/icons/clock-countdown-fill.svg",
 	"./assets/icons/check-circle-fill.svg",
+	"./assets/icons/plus.svg",
 	"./assets/icons/trash.svg",
+	"./assets/icons/cloud-arrow-down-fill.svg",
+	"./assets/icons/cloud-arrow-up-fill.svg",
+
+	// Typography
+	"./typography/GoogleSans-Regular.ttf",
+	"./typography/GoogleSans-Bold.ttf",
+	"./typography/Lora-Regular.ttf",
+	"./typography/Lora-Bold.ttf",
 ];
 
-// Install: precache static assets
+// Install
 self.addEventListener("install", (event) => {
 	self.skipWaiting();
 	event.waitUntil(
-		caches.open(CACHE_NAME).then((cache) => {
-			return cache.addAll(STATIC_ASSETS);
-		})
+		caches.open(CACHE_NAME).then((cache) => cache.addAll(STATIC_ASSETS))
 	);
 });
 
-// Activate: clean old caches and register periodic sync
+// Activate
 self.addEventListener("activate", (event) => {
 	event.waitUntil(
 		(async () => {
@@ -35,102 +45,77 @@ self.addEventListener("activate", (event) => {
 					.map((k) => caches.delete(k))
 			);
 
-			// Register periodic background sync (Chrome Android)
-			if ("periodicSync" in self.registration) {
-				try {
-					await self.registration.periodicSync.register("task-check", {
-						minInterval: 15 * 60 * 1000, // every 15 minutes
-					});
-				} catch (err) {
-					console.log("Periodic background sync failed (expected):", err);
-				}
-			}
-
 			await self.clients.claim();
 		})()
 	);
 });
 
-// Fetch: cache-first strategy for static assets
+// Fetch (cache-first)
 self.addEventListener("fetch", (event) => {
 	if (event.request.method !== "GET") return;
 
 	event.respondWith(
-		caches.match(event.request).then((cachedResponse) => {
+		caches.match(event.request).then((cached) => {
 			return (
-				cachedResponse ||
-				fetch(event.request)
-					.then((networkResponse) => {
-						return caches.open(CACHE_NAME).then((cache) => {
-							cache.put(event.request, networkResponse.clone());
-							return networkResponse;
-						});
-					})
-					.catch(() => cachedResponse)
+				cached ||
+				fetch(event.request).then((networkResponse) => {
+					return caches.open(CACHE_NAME).then((cache) => {
+						cache.put(event.request, networkResponse.clone());
+						return networkResponse;
+					});
+				})
 			);
 		})
 	);
 });
 
-// Receive updated task list from main
+// Receive tasks from app
 self.addEventListener("message", async (event) => {
-	if (event.data && event.data.type === "SYNC_TASKS") {
+	if (!event.data) return;
+
+	if (event.data.type === "SYNC_TASKS") {
 		const cache = await caches.open(DATA_CACHE_NAME);
-
-		const existingResponse = await cache.match("./tasks-data");
-		let existingTasks = [];
-
-		if (existingResponse) {
-			const existingData = await existingResponse.json();
-			existingTasks = existingData.tasks || [];
-		}
-
-		// Merge tasks
-		const mergedTasks = event.data.tasks.map((task) => {
-			const cachedTask = existingTasks.find((t) => t.id === task.id);
-			if (cachedTask && cachedTask.notified) {
-				return { ...task, notified: true };
-			}
-			return task;
-		});
-
 		await cache.put(
 			"./tasks-data",
-			new Response(JSON.stringify({ tasks: mergedTasks }))
+			new Response(JSON.stringify({ tasks: event.data.tasks }))
 		);
+	}
+
+	if (event.data.type === "CHECK_DEADLINES") {
+		await checkTaskDeadlines();
 	}
 });
 
-// Function to check deadlines and notify
+// Check deadlines & notify
 async function checkTaskDeadlines() {
 	try {
 		const cache = await caches.open(DATA_CACHE_NAME);
 		const response = await cache.match("./tasks-data");
 		if (!response) return;
 
-		const fullData = await response.json();
-		const tasks = fullData.tasks;
+		const { tasks } = await response.json();
 		const now = Date.now();
 
 		let updated = false;
 
 		for (const task of tasks) {
-			if (task && task.deadline && !task.completed && !task.notified) {
-				if (new Date(task.deadline).getTime() <= now) {
-					try {
-						await self.registration.showNotification("Kuic Tasks", {
-							body: task.title,
-							icon: "./assets/icons/logo-no-bg.png",
-							badge: "./assets/icons/logo-no-bg.png",
-							tag: `task-${task.id}`,
-							renotify: false,
-							requireInteraction: true,
-						});
+			if (
+				task &&
+				task.deadline &&
+				!task.completed &&
+				!task.notified &&
+				new Date(task.deadline).getTime() <= now
+			) {
+				await self.registration.showNotification("Kuic Tasks", {
+					body: task.title,
+					icon: "./assets/icons/logo-no-bg.png",
+					badge: "./assets/icons/logo-no-bg.png",
+					tag: `task-${task.id}`,
+					requireInteraction: true,
+				});
 
-						task.notified = true;
-						updated = true;
-					} catch {}
-				}
+				task.notified = true;
+				updated = true;
 			}
 		}
 
@@ -138,16 +123,6 @@ async function checkTaskDeadlines() {
 			await cache.put("./tasks-data", new Response(JSON.stringify({ tasks })));
 		}
 	} catch (err) {
-		console.error("Error checking deadlines:", err);
+		console.error("Deadline check error:", err);
 	}
 }
-
-// Check deadlines every minute
-setInterval(checkTaskDeadlines, 60000);
-
-// Handle periodic background sync (Chrome Android)
-self.addEventListener("periodicsync", (event) => {
-	if (event.tag === "task-check") {
-		event.waitUntil(checkTaskDeadlines());
-	}
-});

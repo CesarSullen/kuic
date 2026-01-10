@@ -14,6 +14,12 @@ const i18n = {
 		delete: "Delete",
 		completed: "Completed",
 		deadlinePlaceholder: "Due date",
+		import: "Import",
+		export: "Export",
+		exportSuccess: "Export complete",
+		importSuccess: "Import complete",
+		invalidFile: "Invalid file",
+		fileReadError: "Error reading file: ",
 	},
 	es: {
 		newColumn: "Nueva lista",
@@ -26,6 +32,12 @@ const i18n = {
 		delete: "Eliminar",
 		completed: "Completada",
 		deadlinePlaceholder: "Fecha límite",
+		import: "Importar",
+		export: "Exportar",
+		exportSuccess: "Exportación completa",
+		importSuccess: "Importación completa",
+		invalidFile: "Archivo inválido",
+		fileReadError: "Error leyendo el archivo: ",
 	},
 };
 
@@ -45,7 +57,7 @@ let taskList = [
 		title: "Review Q4 budget report",
 		columnId: "pending",
 		completed: false,
-		deadline: null,
+		deadline: "",
 		notified: false,
 	},
 	{
@@ -53,7 +65,7 @@ let taskList = [
 		title: "Design new landing page",
 		columnId: "inprogress",
 		completed: false,
-		deadline: null,
+		deadline: "",
 		notified: false,
 	},
 	{
@@ -61,7 +73,7 @@ let taskList = [
 		title: "Launch email campaign",
 		columnId: "completed",
 		completed: true,
-		deadline: null,
+		deadline: "",
 		notified: false,
 	},
 ];
@@ -101,7 +113,7 @@ function generateId(prefix = "id") {
 function saveToStorage() {
 	localStorage.setItem("columns", JSON.stringify(columnList));
 	localStorage.setItem("tasks", JSON.stringify(taskList));
-	syncTasksToSW();
+	syncTasksToSW(taskList);
 }
 
 function loadFromStorage() {
@@ -190,19 +202,16 @@ function createTaskCard(task) {
 	}
 
 	deadlineView.addEventListener("click", async () => {
-		deadlineView.style.display = "none";
-		deadlineInput.style.display = "inline-block";
-
-		if (task.deadline) {
-			deadlineInput.value = task.deadline.slice(0, 16);
-		} else {
-			deadlineInput.value = "";
-		}
-
 		deadlineInput.focus();
 
 		if (deadlineInput.showPicker) {
 			deadlineInput.showPicker();
+		}
+
+		if (task.deadline) {
+			deadlineInput.value = task.deadline;
+		} else {
+			deadlineInput.value = "";
 		}
 
 		await notificationPermission();
@@ -212,16 +221,11 @@ function createTaskCard(task) {
 		if (deadlineInput.value) {
 			task.deadline = deadlineInput.value + ":00";
 		} else {
-			task.deadline = null;
+			task.deadline = "";
 		}
 
 		saveToStorage();
 		renderBoard();
-	});
-
-	deadlineInput.addEventListener("blur", () => {
-		deadlineInput.style.display = "none";
-		deadlineView.style.display = "inline-block";
 	});
 
 	updateDeadlineView();
@@ -410,8 +414,8 @@ function initDragAndDrop() {
 	});
 }
 
-// Event for adding new column
-document.querySelector(".btn").addEventListener("click", () => {
+// Add a new column
+document.getElementById("newColumnBtn").addEventListener("click", () => {
 	const newId = generateId("col");
 	const newName = prompt(texts.newColumn) || texts.newColumn;
 	columnList.push({ id: newId, name: newName });
@@ -435,23 +439,94 @@ async function notificationPermission() {
 	return false;
 }
 
+// Export & Import Data
+function exportTasks() {
+	const data = {
+		columns: columnList,
+		tasks: taskList,
+	};
+
+	const json = JSON.stringify(data, null, 2);
+	const blob = new Blob([json], { type: "application/json" });
+	const url = URL.createObjectURL(blob);
+
+	const a = document.createElement("a");
+	a.href = url;
+	a.download = "kuic_tasks.json";
+
+	a.click();
+	URL.revokeObjectURL(url);
+
+	alert(texts.exportSuccess);
+}
+
+const importBtn = document.getElementById("importBtn");
+const fileInput = document.getElementById("fileInput");
+
+document.getElementById("importBtnText").textContent = texts.import;
+document.getElementById("exportBtnText").textContent = texts.export;
+
+importBtn.addEventListener("click", () => {
+	fileInput.click();
+});
+function importTasks(event) {
+	const file = event.target.files[0];
+	if (!file) return;
+
+	const reader = new FileReader();
+	reader.onload = function (e) {
+		try {
+			const data = JSON.parse(e.target.result);
+
+			if (!data.columns || !data.tasks) {
+				alert(texts.invalidFile);
+				return;
+			}
+
+			columnList = data.columns;
+			taskList = data.tasks;
+
+			saveToStorage();
+			renderBoard();
+
+			alert(texts.importSuccess);
+		} catch (err) {
+			alert(texts.fileReadError + err.message);
+		}
+	};
+	reader.readAsText(file);
+}
+
 // Load data and render on page load
 loadFromStorage();
 renderBoard();
-syncTasksToSW();
+syncTasksToSW(taskList);
 
-// Service Worker Implementation
+// Service Worker setup
 if ("serviceWorker" in navigator) {
-	window.addEventListener("load", () => {
-		navigator.serviceWorker.register("./sw.js");
-	});
+	navigator.serviceWorker
+		.register("./sw.js")
+		.then(() => navigator.serviceWorker.ready)
+		.then((registration) => {
+			if (registration.active) {
+				registration.active.postMessage({
+					type: "CHECK_DEADLINES",
+				});
+			}
+		})
+		.catch(console.error);
 }
 
-function syncTasksToSW() {
-	if ("serviceWorker" in navigator && navigator.serviceWorker.controller) {
-		navigator.serviceWorker.controller.postMessage({
-			type: "SYNC_TASKS",
-			tasks: taskList,
-		});
-	}
+// Sync tasks to Service Worker
+function syncTasksToSW(taskList) {
+	if (!("serviceWorker" in navigator)) return;
+
+	navigator.serviceWorker.ready.then((registration) => {
+		if (registration.active) {
+			registration.active.postMessage({
+				type: "SYNC_TASKS",
+				tasks: taskList,
+			});
+		}
+	});
 }
