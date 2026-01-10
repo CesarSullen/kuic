@@ -202,16 +202,19 @@ function createTaskCard(task) {
 	}
 
 	deadlineView.addEventListener("click", async () => {
-		deadlineInput.focus();
-
-		if (deadlineInput.showPicker) {
-			deadlineInput.showPicker();
-		}
+		deadlineView.style.display = "none";
+		deadlineInput.style.display = "inline-block";
 
 		if (task.deadline) {
 			deadlineInput.value = task.deadline;
 		} else {
 			deadlineInput.value = "";
+		}
+
+		deadlineInput.focus();
+
+		if (deadlineInput.showPicker) {
+			deadlineInput.showPicker();
 		}
 
 		await notificationPermission();
@@ -226,6 +229,11 @@ function createTaskCard(task) {
 
 		saveToStorage();
 		renderBoard();
+	});
+
+	deadlineInput.addEventListener("blur", () => {
+		deadlineInput.style.display = "none";
+		deadlineView.style.display = "inline-block";
 	});
 
 	updateDeadlineView();
