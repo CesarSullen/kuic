@@ -2,8 +2,7 @@
 
 ## Description
 
-A Kanban-style task app that works **offline**, is **privacy-first**, and **local-first**.  
-Includes multilingual support, animations when creating tasks, and the option to mark tasks as completed.
+A Kanban-style task app that works **offline**, is **privacy-first**, and **local-first**.
 
 ## Features
 
@@ -34,3 +33,7 @@ No information is sent to any external server.
 You can try the application at the following link: [cesarsullen.github.io/kuic](https://cesarsullen.github.io/kuic).
 
 I hope you enjoy! <3
+
+# License
+
+Licensed under the MIT License. See the [License](LICENSE.md) file for details.
