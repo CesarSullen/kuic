@@ -7,14 +7,14 @@ A Kanban-style task app that works **offline**, is **privacy-first**, and **loca
 ## Features
 
 - Create, edit, and delete columns and tasks
-- Mark tasks as completed (button "Complete"/"Completed")
+- Set due dates for tasks
+- Mark tasks as completed or delete them
 - **Dynamic counters** for pending and completed tasks
 - Import / Export data in JSON format
 - Drag & drop tasks between columns (desktop)
-- Offline-first using Service Worker and Cache Storage
-- Compatible with multiple languages (currently English and Spanish)
+- Offline-first using Local Storage and Cache Storage
 - Optimized for desktop and mobile
-- Notifications for tasks with due dates
+- Notifications for tasks with due dates (only if app is open, sorry, I don't make the rules)
 
 ## Privacy and Data
 

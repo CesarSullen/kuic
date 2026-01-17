@@ -201,15 +201,15 @@ function createTaskCard(task) {
 		}
 	}
 
+	let initialDeadlineValue = "";
+	const isMobile = "ontouchstart" in window;
+
 	deadlineView.addEventListener("click", async () => {
 		deadlineView.style.display = "none";
 		deadlineInput.style.display = "inline-block";
 
-		if (task.deadline) {
-			deadlineInput.value = task.deadline;
-		} else {
-			deadlineInput.value = "";
-		}
+		initialDeadlineValue = task.deadline || "";
+		deadlineInput.value = initialDeadlineValue;
 
 		deadlineInput.focus();
 
@@ -220,7 +220,9 @@ function createTaskCard(task) {
 		await notificationPermission();
 	});
 
-	deadlineInput.addEventListener("change", () => {
+	function saveDeadline() {
+		if (deadlineInput.value === initialDeadlineValue) return;
+
 		if (deadlineInput.value) {
 			task.deadline = deadlineInput.value + ":00";
 		} else {
@@ -229,7 +231,13 @@ function createTaskCard(task) {
 
 		saveToStorage();
 		renderBoard();
-	});
+	}
+
+	if (isMobile) {
+		deadlineInput.addEventListener("blur", saveDeadline);
+	} else {
+		deadlineInput.addEventListener("change", saveDeadline);
+	}
 
 	deadlineInput.addEventListener("blur", () => {
 		deadlineInput.style.display = "none";
