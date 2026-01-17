@@ -235,6 +235,13 @@ function createTaskCard(task) {
 
 	if (isMobile) {
 		deadlineInput.addEventListener("blur", saveDeadline);
+
+		// For reset buttons
+		deadlineInput.addEventListener("change", () => {
+			if (initialDeadlineValue && !deadlineInput.value) {
+				saveDeadline();
+			}
+		});
 	} else {
 		deadlineInput.addEventListener("change", saveDeadline);
 	}
