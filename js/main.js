@@ -258,7 +258,7 @@ function createTaskCard(task) {
 
 	// Complete button
 	const completeBtn = document.createElement("button");
-	completeBtn.classList.add("action-btn", "complete-btn");
+	completeBtn.classList.add("btn", "action-btn", "complete-btn");
 
 	if (task.completed) {
 		card.classList.add("completed");
@@ -277,7 +277,7 @@ function createTaskCard(task) {
 
 	// Delete button
 	const deleteBtn = document.createElement("button");
-	deleteBtn.classList.add("action-btn", "delete-btn");
+	deleteBtn.classList.add("btn", "action-btn", "delete-btn");
 	deleteBtn.textContent = `${texts.delete}`;
 	deleteBtn.addEventListener("click", () => {
 		taskList = taskList.filter((t) => t.id !== task.id);

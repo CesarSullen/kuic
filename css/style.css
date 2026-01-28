@@ -115,6 +115,9 @@ hr {
   color: black;
 }
 .btn:hover {
+  transform: scale(0.98);
+}
+.btn:active {
   transform: scale(0.95);
 }
 @media screen and (min-width: 700px) {
@@ -375,7 +378,6 @@ section {
 @media screen and (min-width: 700px) {
   .task-card:active {
     cursor: grabbing;
-    transform: scale(0.95);
   }
 }
 .task-card .task-title {
@@ -441,9 +443,6 @@ section {
   text-transform: uppercase;
   letter-spacing: 0.7px;
   transition: 0.2s;
-}
-.action-btn:hover {
-  transform: scale(0.98);
 }
 .action-btn.complete-btn {
   color: hsl(0, 0%, 0%);

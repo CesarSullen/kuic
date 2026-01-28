@@ -174,10 +174,6 @@
 		opacity: 0;
 		transform: translateY(-20px) scale(0.5);
 	}
-	&.remove {
-		opacity: 0;
-		transform: scale(0.8) translateY(-10px);
-	}
 
 	&.completed {
 		.task-title {
@@ -200,7 +196,6 @@
 	@media screen and (min-width: 700px) {
 		&:active {
 			cursor: grabbing;
-			transform: scale(0.95);
 		}
 	}
 
@@ -275,10 +270,6 @@
 	text-transform: uppercase;
 	letter-spacing: 0.7px;
 	transition: 0.2s;
-
-	&:hover {
-		transform: scale(0.98);
-	}
 
 	&.complete-btn {
 		color: hsl(0, 0, 0);
