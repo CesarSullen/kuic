@@ -1,16 +1,41 @@
 {
 	"name": "Kuic Tasks",
 	"short_name": "Kuic",
-	"description": "Simple Kanban board built with vanilla JavaScript",
+	"description": "Simple Kanban board built with vanilla JavaScript.",
 	"start_url": "./index.html",
 	"display": "standalone",
+	"scope": "./",
 	"background_color": "#101010",
 	"theme_color": "#101010",
 	"icons": [
 		{
 			"src": "./assets/icons/logo.png",
-			"sizes": "512x512",
-			"type": "image/png"
+			"sizes": "1024x1024",
+			"type": "image/png",
+			"purpose": "any"
+		}
+	],
+	"screenshots": [
+		{
+			"src": "./assets/screenshots/mobile-1.png",
+			"sizes": "750x1334",
+			"type": "image/png",
+			"form_factor": "narrow",
+			"label": "Mobile view 1"
+		},
+		{
+			"src": "./assets/screenshots/mobile-2.png",
+			"sizes": "750x1334",
+			"type": "image/png",
+			"form_factor": "narrow",
+			"label": "Mobile view 2"
+		},
+		{
+			"src": "./assets/screenshots/desktop-1.png",
+			"sizes": "2048x2732",
+			"type": "image/png",
+			"form_factor": "wide",
+			"label": "Desktop view"
 		}
 	]
 }

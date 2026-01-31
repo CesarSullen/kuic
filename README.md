@@ -1,39 +1,45 @@
-# Kanban Board
+# Collector - Bet Collection Tool
 
 ## Description
 
-A Kanban-style task app that works **offline**, is **privacy-first**, and **local-first**.
+An **offline-first**, **privacy-first**, and **local-first** tool built specifically for bet collectors ("listeros").  
+It lets you quickly register and organize daily bets and export the data in JSON format for later processing or accounting.
 
 ## Features
 
-- Create, edit, and delete columns and tasks
-- Set due dates for tasks
-- Mark tasks as completed or delete them
-- **Dynamic counters** for pending and completed tasks
-- Import / Export data in JSON format
-- Drag & drop tasks between columns (desktop)
-- Offline-first using Local Storage and Cache Storage
-- Optimized for desktop and mobile
-- Notifications for tasks with due dates (only if app is open, sorry, I don't make the rules)
+- Client registration with automatic timestamp capture
+- Separate handling of **fijos** (straight bets) and **corridos** (parlay/chain bets)
+- Automatic number validation (only allows 00–99)
+- Smart formatting: turns "5" → "05", "7" → "07", etc.
+- Real-time calculations: totals per bet type + grand total
+- JSON export including collector name, date & metadata
+- **Full persistence** — data survives browser/tab/app closure
+- 100% **offline** support (powered by Local Storage + Cache Storage)
+- Installable **PWA** — works offline and can be added to home screen
+- Native file sharing via Web Share API (easy to send the .json file)
 
 ## Privacy and Data
 
-All data is stored **locally** in the browser (Local Storage and Cache Storage).  
-No information is sent to any external server.
+All your data stays **exclusively on your device** (Local Storage + Cache Storage).  
+Nothing is ever sent to any external server.  
+You are in full control — share the JSON file only when _you_ want to, using your device's native share menu.
 
 ## Technologies
 
-- HTML, CSS, JavaScript
-- Service Worker for PWA
-- Local Storage for data persistence
-- Cache Storage for offline-first
+- HTML5, CSS3 & Vanilla JavaScript (no frameworks)
+- Service Worker → offline support & asset caching
+- Local Storage → persistent storage of bets & collector settings
+- Web Share API → native file sharing from the browser
+- Web App Manifest → proper PWA install experience
 
-# Try KUIC
+## Try Collector
 
-You can try the application at the following link: [cesarsullen.github.io/kuic](https://cesarsullen.github.io/kuic).
+You can try the application live here:  
+→ [cesarsullen.github.io/collector](https://cesarsullen.github.io/collector)
 
-I hope you enjoy! <3
+Hope it makes your daily workflow much smoother! <3
 
-# License
+## License
 
-Licensed under the MIT License. See the [License](LICENSE.md) file for details.
+Licensed under the **MIT License**.  
+See the [LICENSE](LICENSE) file for details.

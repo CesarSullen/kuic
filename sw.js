@@ -1,4 +1,4 @@
-const CACHE_NAME = "kanban-static-v6.3";
+const CACHE_NAME = "kanban-static-v6.4";
 const DATA_CACHE_NAME = "kanban-data-v5.1";
 
 const STATIC_ASSETS = [
@@ -18,6 +18,11 @@ const STATIC_ASSETS = [
 	"./assets/icons/trash.svg",
 	"./assets/icons/cloud-arrow-down-fill.svg",
 	"./assets/icons/cloud-arrow-up-fill.svg",
+
+	// Screenshots
+	"./assets/screenshots/mobile-1.png",
+	"./assets/screenshots/mobile-2.png",
+	"./assets/screenshots/desktop-1.png",
 
 	// Typography
 	"./typography/GoogleSans-Regular.ttf",
