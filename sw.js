@@ -1,4 +1,4 @@
-const CACHE_NAME = "kanban-static-v6.4";
+const CACHE_NAME = "kanban-static-v6.5";
 const DATA_CACHE_NAME = "kanban-data-v5.1";
 
 const STATIC_ASSETS = [
@@ -35,7 +35,7 @@ const STATIC_ASSETS = [
 self.addEventListener("install", (event) => {
 	self.skipWaiting();
 	event.waitUntil(
-		caches.open(CACHE_NAME).then((cache) => cache.addAll(STATIC_ASSETS))
+		caches.open(CACHE_NAME).then((cache) => cache.addAll(STATIC_ASSETS)),
 	);
 });
 
@@ -47,11 +47,11 @@ self.addEventListener("activate", (event) => {
 			await Promise.all(
 				keys
 					.filter((k) => k !== CACHE_NAME && k !== DATA_CACHE_NAME)
-					.map((k) => caches.delete(k))
+					.map((k) => caches.delete(k)),
 			);
 
 			await self.clients.claim();
-		})()
+		})(),
 	);
 });
 
@@ -70,7 +70,7 @@ self.addEventListener("fetch", (event) => {
 					});
 				})
 			);
-		})
+		}),
 	);
 });
 
@@ -82,7 +82,7 @@ self.addEventListener("message", async (event) => {
 		const cache = await caches.open(DATA_CACHE_NAME);
 		await cache.put(
 			"./tasks-data",
-			new Response(JSON.stringify({ tasks: event.data.tasks }))
+			new Response(JSON.stringify({ tasks: event.data.tasks })),
 		);
 	}
 

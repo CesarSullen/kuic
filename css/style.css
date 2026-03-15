@@ -37,12 +37,21 @@
   list-style: none;
   text-decoration: none;
   font-family: "GoogleSans", sans-serif;
+  -webkit-tap-highlight-color: transparent;
 }
 
 body {
   background-color: #101010;
   overflow-x: hidden;
   color: #fafafa;
+}
+
+html,
+body {
+  -webkit-user-select: none;
+  -ms-user-select: none;
+  user-select: none;
+  -webkit-touch-callout: none;
 }
 
 a {
