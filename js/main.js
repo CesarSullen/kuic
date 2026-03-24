@@ -375,7 +375,7 @@ function renderBoard() {
 		if (lastCreatedTaskId) {
 			requestAnimationFrame(() => {
 				const titleEl = document.querySelector(
-					`.task-card[data-task-id="${lastCreatedTaskId}"] .task-title`
+					`.task-card[data-task-id="${lastCreatedTaskId}"] .task-title`,
 				);
 				if (!titleEl) return;
 
@@ -524,6 +524,20 @@ function importTasks(event) {
 loadFromStorage();
 renderBoard();
 syncTasksToSW(taskList);
+
+async function trackProjectActivity(projectName) {
+	try {
+		const { error } = await _supabase.rpc("increment_visit", {
+			name_param: projectName,
+		});
+
+		if (error) throw error;
+	} catch (err) {
+		console.warn("Offline mode");
+	}
+}
+
+trackProjectActivity("Kuic");
 
 // Service Worker setup
 if ("serviceWorker" in navigator) {

@@ -1,4 +1,4 @@
-const CACHE_NAME = "kanban-static-v6.5";
+const CACHE_NAME = "kanban-static-v6.6";
 const DATA_CACHE_NAME = "kanban-data-v5.1";
 
 const STATIC_ASSETS = [
@@ -7,6 +7,7 @@ const STATIC_ASSETS = [
 	"./index.html",
 	"./css/style.css",
 	"./js/main.js",
+	"./js/supabase-config.js",
 	"./manifest.json",
 
 	// Assets
