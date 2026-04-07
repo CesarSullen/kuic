@@ -326,6 +326,44 @@ section {
 	transform: translateY(0) scale(1);
 }
 
+.complete-btn-checkbox {
+	width: 26px;
+	/* height: 26px; */
+	min-width: 26px;
+	/* min-height: 26px; */
+	aspect-ratio: 1;
+	border: 2px solid var(--accent);
+	border-radius: 8px;
+	background-color: rgba(255, 255, 255, 0);
+	cursor: pointer;
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	align-self: flex-start;
+	padding: 2px;
+}
+
+.complete-btn-checkbox:active {
+	transform: scale(0.9);
+}
+
+.complete-btn-checkbox img {
+	width: 100%;
+	height: 100%;
+	animation: fadeIn 0.1s ease forwards;
+}
+
+@keyframes fadeIn {
+	from {
+		opacity: 0;
+		transform: scale(0);
+	}
+	to {
+		opacity: 1;
+		transform: scale(1);
+	}
+}
+
 .task-content-wrapper {
 	display: flex;
 	flex-direction: column;
@@ -405,42 +443,6 @@ section {
 	border: var(--border-subtle);
 	background: var(--dark-bg);
 	color: var(--text-light);
-}
-
-.complete-btn-checkbox {
-	width: 26px;
-	height: 26px;
-	aspect-ratio: 1;
-	border: 2px solid var(--accent);
-	border-radius: 8px;
-	background-color: rgba(255, 255, 255, 0);
-	cursor: pointer;
-	display: flex;
-	align-items: center;
-	justify-content: center;
-	align-self: flex-start;
-	padding: 2px;
-}
-
-.complete-btn-checkbox:active {
-	transform: scale(0.9);
-}
-
-.complete-btn-checkbox img {
-	width: 100%;
-	height: 100%;
-	animation: fadeIn 0.1s ease forwards;
-}
-
-@keyframes fadeIn {
-	from {
-		opacity: 0;
-		transform: scale(0);
-	}
-	to {
-		opacity: 1;
-		transform: scale(1);
-	}
 }
 
 .delete-btn-icon {
