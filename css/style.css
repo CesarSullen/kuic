@@ -409,6 +409,7 @@ section {
 
 .complete-btn-checkbox {
 	width: 26px;
+	height: 26px;
 	aspect-ratio: 1;
 	border: 2px solid var(--accent);
 	border-radius: 8px;
