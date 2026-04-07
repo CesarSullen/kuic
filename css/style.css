@@ -359,6 +359,7 @@ section {
 	white-space: nowrap;
 	overflow: hidden;
 	text-overflow: ellipsis;
+	text-wrap: wrap;
 }
 
 .task-title:focus {
@@ -408,7 +409,7 @@ section {
 
 .complete-btn-checkbox {
 	width: 26px;
-	height: 26px;
+	aspect-ratio: 1;
 	border: 2px solid var(--accent);
 	border-radius: 8px;
 	background-color: rgba(255, 255, 255, 0);
