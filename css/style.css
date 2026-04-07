@@ -175,7 +175,7 @@ section {
 	-webkit-backdrop-filter: blur(10px);
 	border: 1px solid rgba(255, 255, 255, 0.1);
 	border-radius: var(--border-radius);
-	padding: var(--padding);
+	padding: var(--padding-small);
 	display: flex;
 	flex-direction: column;
 	justify-content: center;
@@ -200,6 +200,7 @@ section {
 	font-weight: 700;
 	line-height: 1;
 	color: var(--accent);
+	font-family: "Lora";
 }
 
 .stat-label {
@@ -261,7 +262,7 @@ section {
 .column {
 	display: flex;
 	flex-direction: column;
-	padding: var(--padding);
+	padding: var(--padding-small);
 	border-radius: var(--border-radius);
 	box-shadow: var(--shadow);
 	width: 100%;
@@ -327,11 +328,9 @@ section {
 }
 
 .complete-btn-checkbox {
-	width: 26px;
-	/* height: 26px; */
-	min-width: 26px;
-	/* min-height: 26px; */
-	aspect-ratio: 1;
+	width: 24px;
+	height: 24px;
+	flex: 0 0 24px;
 	border: 2px solid var(--accent);
 	border-radius: 8px;
 	background-color: rgba(255, 255, 255, 0);
