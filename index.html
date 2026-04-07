@@ -33,34 +33,38 @@
 
 		<title>Kuic Tasks</title>
 	</head>
-	<body id="body">
+	<body id="body" class="body">
+		<button class="floating-btn" id="newColumnBtn">
+			<img src="./assets/icons/plus.svg" />
+		</button>
 		<header class="panel-header">
-			<h1 class="panel-title">
-				<img src="./assets/icons/logo-no-bg.png" class="panel-logo" />
-				KUIC
-			</h1>
+			<h1 class="panel-title">KUIC</h1>
 
 			<div class="task-stats">
 				<div class="task-stat">
-					<img
-						class="btn-icon"
-						src="./assets/icons/clock-countdown-fill.svg"
-						alt=""
-						srcset=""
-					/>
-					<span class="tasks-pending">Pending: 0</span>
+					<div class="stat-header">
+						<img
+							class="stat-icon"
+							src="./assets/icons/clock-countdown-fill.svg"
+							alt=""
+						/>
+						<span class="tasks-pending-number stat-number">0</span>
+					</div>
+					<span class="stat-label">Pendientes</span>
 				</div>
+
 				<div class="task-stat">
-					<img
-						class="btn-icon"
-						src="./assets/icons/check-circle-fill.svg"
-						alt=""
-						srcset=""
-					/>
-					<span class="tasks-completed">Completed: 0</span>
+					<div class="stat-header">
+						<img
+							class="stat-icon"
+							src="./assets/icons/check-circle-fill.svg"
+							alt=""
+						/>
+						<span class="tasks-completed-number stat-number">0</span>
+					</div>
+					<span class="stat-label">Completadas</span>
 				</div>
 			</div>
-			<button class="btn" id="newColumnBtn">+ New list</button>
 		</header>
 
 		<input

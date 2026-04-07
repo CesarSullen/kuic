@@ -85,23 +85,22 @@ function updateTaskCounters() {
 	const pendingCount = taskList.filter((t) => !t.completed).length;
 	const completedCount = taskList.filter((t) => t.completed).length;
 
-	const pendingEl = document.querySelector(".tasks-pending");
-	const completedEl = document.querySelector(".tasks-completed");
+	const pendingNumEl = document.querySelector(".tasks-pending-number");
+	const completedNumEl = document.querySelector(".tasks-completed-number");
 
-	if (pendingEl)
-		pendingEl.textContent = `${texts.pendingTasks}: ${pendingCount}`;
-	if (completedEl)
-		completedEl.textContent = `${texts.completedTasks}: ${completedCount}`;
+	if (pendingNumEl) pendingNumEl.textContent = pendingCount;
+	if (completedNumEl) completedNumEl.textContent = completedCount;
 
 	console.log("pending: " + pendingCount + ", completed: " + completedCount);
 }
 
 // Update static HTML buttons with current language
 window.addEventListener("load", () => {
-	const newColumnBtn = document.querySelector(".btn");
-	if (newColumnBtn) {
-		newColumnBtn.textContent = texts.newColumn;
-	}
+	const importBtnText = document.getElementById("importBtnText");
+	const exportBtnText = document.getElementById("exportBtnText");
+
+	if (importBtnText) importBtnText.textContent = texts.import;
+	if (exportBtnText) exportBtnText.textContent = texts.export;
 });
 
 // Generate unique IDs
@@ -143,9 +142,12 @@ function createTaskCard(task) {
 	const card = document.createElement("div");
 	card.classList.add("task-card", task.columnId);
 	card.dataset.taskId = task.id;
-	card.draggable = true;
 
-	if (task.completed) card.classList.add("completed");
+	card.classList.toggle("completed", task.completed);
+
+	// Container for center content (Title + Deadline)
+	const contentWrapper = document.createElement("div");
+	contentWrapper.classList.add("task-content-wrapper");
 
 	const title = document.createElement("p");
 	title.classList.add("task-title");
@@ -175,7 +177,6 @@ function createTaskCard(task) {
 		const date = new Date(dateString);
 
 		return new Intl.DateTimeFormat("default", {
-			// year: "numeric",
 			month: "short",
 			day: "numeric",
 			hour: "numeric",
@@ -236,7 +237,6 @@ function createTaskCard(task) {
 	if (isMobile) {
 		deadlineInput.addEventListener("blur", saveDeadline);
 
-		// For reset buttons
 		deadlineInput.addEventListener("change", () => {
 			if (initialDeadlineValue && !deadlineInput.value) {
 				saveDeadline();
@@ -253,19 +253,16 @@ function createTaskCard(task) {
 
 	updateDeadlineView();
 
-	const actionRow = document.createElement("div");
-	actionRow.classList.add("action-row");
+	contentWrapper.append(title, deadlineWrapper);
 
 	// Complete button
 	const completeBtn = document.createElement("button");
-	completeBtn.classList.add("btn", "action-btn", "complete-btn");
+	completeBtn.classList.add("complete-btn-checkbox");
 
 	if (task.completed) {
-		card.classList.add("completed");
-		completeBtn.textContent = texts.completed;
-	} else {
-		card.classList.remove("completed");
-		completeBtn.textContent = texts.complete;
+		const checkIcon = document.createElement("img");
+		checkIcon.src = "./assets/icons/check-bold.svg";
+		completeBtn.appendChild(checkIcon);
 	}
 
 	completeBtn.addEventListener("click", () => {
@@ -277,8 +274,11 @@ function createTaskCard(task) {
 
 	// Delete button
 	const deleteBtn = document.createElement("button");
-	deleteBtn.classList.add("btn", "action-btn", "delete-btn");
-	deleteBtn.textContent = `${texts.delete}`;
+	deleteBtn.classList.add("delete-btn-icon");
+	const trashIcon = document.createElement("img");
+	trashIcon.src = "./assets/icons/trash-duotone.svg";
+	deleteBtn.appendChild(trashIcon);
+
 	deleteBtn.addEventListener("click", () => {
 		taskList = taskList.filter((t) => t.id !== task.id);
 		saveToStorage();
@@ -293,8 +293,7 @@ function createTaskCard(task) {
 		});
 	}
 
-	actionRow.append(completeBtn, deleteBtn);
-	card.append(title, deadlineWrapper, actionRow);
+	card.append(completeBtn, contentWrapper, deleteBtn);
 	return card;
 }
 
@@ -395,46 +394,6 @@ function renderBoard() {
 		}
 	});
 	updateTaskCounters();
-	initDragAndDrop();
-}
-
-// Drag and drop
-function initDragAndDrop() {
-	const columns = document.querySelectorAll(".column-body");
-	let draggedCard = null;
-
-	document.querySelectorAll(".task-card").forEach((card) => {
-		card.addEventListener("dragstart", () => {
-			draggedCard = card;
-			card.style.opacity = "0.5";
-		});
-		card.addEventListener("dragend", () => {
-			draggedCard = null;
-			card.style.opacity = "1";
-		});
-	});
-
-	columns.forEach((column) => {
-		column.addEventListener("dragover", (e) => {
-			e.preventDefault();
-			column.style.background = "rgba(255, 255, 255, 0.1)";
-		});
-		column.addEventListener("dragleave", () => {
-			column.style.background = "transparent";
-		});
-		column.addEventListener("drop", () => {
-			if (!draggedCard) return;
-			const newColumnId = column.dataset.columnId;
-			const taskId = draggedCard.dataset.taskId;
-			const task = taskList.find((t) => t.id === taskId);
-			if (task) {
-				task.columnId = newColumnId;
-				renderBoard();
-				saveToStorage();
-			}
-			column.style.background = "transparent";
-		});
-	});
 }
 
 // Add a new column
