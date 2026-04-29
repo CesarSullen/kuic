@@ -142,142 +142,45 @@ function createTaskCard(task) {
 	const card = document.createElement("div");
 	card.classList.add("task-card", task.columnId);
 	card.dataset.taskId = task.id;
-
 	card.classList.toggle("completed", task.completed);
 
-	// Container for center content (Title + Deadline)
-	const contentWrapper = document.createElement("div");
-	contentWrapper.classList.add("task-content-wrapper");
+	card.innerHTML = `
+        <div class="task-content-wrapper">
+            <button class="complete-btn-checkbox">
+                ${task.completed ? `<img src="./assets/icons/check-square-fill.svg">` : ""}
+            </button>
+            <div class="task-info-container">
+                <p class="task-title" contenteditable="true">${task.title}</p>
+                <div class="deadline-wrapper">
+                    <span class="deadline-view"></span>
+                    <input type="datetime-local" class="deadline-input" style="display:none">
+                </div>
+            </div>
+        </div>
+        <button class="delete-btn-icon">
+            <img src="./assets/icons/trash-duotone.svg">
+        </button>
+    `;
 
-	const title = document.createElement("p");
-	title.classList.add("task-title");
-	title.contentEditable = true;
-	title.textContent = task.title;
+	const contentWrapper = card.querySelector(".task-content-wrapper");
+	const title = card.querySelector(".task-title");
+	const completeBtn = card.querySelector(".complete-btn-checkbox");
+	const deleteBtn = card.querySelector(".delete-btn-icon");
+	const deadlineView = card.querySelector(".deadline-view");
+	const deadlineInput = card.querySelector(".deadline-input");
+
 	title.addEventListener("input", () => {
 		task.title = title.textContent.trimEnd();
 		saveToStorage();
 	});
 
-	// Deadline
-	const deadlineWrapper = document.createElement("div");
-	deadlineWrapper.classList.add("deadline-wrapper");
-
-	const deadlineView = document.createElement("span");
-	deadlineView.classList.add("deadline-view");
-
-	const deadlineInput = document.createElement("input");
-	deadlineInput.type = "datetime-local";
-	deadlineInput.classList.add("deadline-input");
-
-	deadlineWrapper.append(deadlineView, deadlineInput);
-
-	function formatDeadline(dateString) {
-		if (!dateString) return "";
-
-		const date = new Date(dateString);
-
-		return new Intl.DateTimeFormat("default", {
-			month: "short",
-			day: "numeric",
-			hour: "numeric",
-			minute: "2-digit",
-			hour12: true,
-		}).format(date);
-	}
-
-	function updateDeadlineView() {
-		deadlineView.classList.remove("placeholder", "expired");
-
-		if (!task.deadline) {
-			deadlineView.textContent = texts.deadlinePlaceholder;
-			deadlineView.classList.add("placeholder");
-			return;
-		}
-
-		deadlineView.textContent = formatDeadline(task.deadline);
-
-		const deadlineTime = new Date(task.deadline).getTime();
-		if (deadlineTime < Date.now()) {
-			deadlineView.classList.add("expired");
-		}
-	}
-
-	let initialDeadlineValue = "";
-	const isMobile = "ontouchstart" in window;
-
-	deadlineView.addEventListener("click", async () => {
-		deadlineView.style.display = "none";
-		deadlineInput.style.display = "inline-block";
-
-		initialDeadlineValue = task.deadline || "";
-		deadlineInput.value = initialDeadlineValue;
-
-		deadlineInput.focus();
-
-		if (deadlineInput.showPicker) {
-			deadlineInput.showPicker();
-		}
-
-		await notificationPermission();
-	});
-
-	function saveDeadline() {
-		if (deadlineInput.value === initialDeadlineValue) return;
-
-		if (deadlineInput.value) {
-			task.deadline = deadlineInput.value + ":00";
-		} else {
-			task.deadline = "";
-		}
-
-		saveToStorage();
-		renderBoard();
-	}
-
-	if (isMobile) {
-		deadlineInput.addEventListener("blur", saveDeadline);
-
-		deadlineInput.addEventListener("change", () => {
-			if (initialDeadlineValue && !deadlineInput.value) {
-				saveDeadline();
-			}
-		});
-	} else {
-		deadlineInput.addEventListener("change", saveDeadline);
-	}
-
-	deadlineInput.addEventListener("blur", () => {
-		deadlineInput.style.display = "none";
-		deadlineView.style.display = "inline-block";
-	});
-
-	updateDeadlineView();
-
-	contentWrapper.append(title, deadlineWrapper);
-
-	// Complete button
-	const completeBtn = document.createElement("button");
-	completeBtn.classList.add("complete-btn-checkbox");
-
-	if (task.completed) {
-		const checkIcon = document.createElement("img");
-		checkIcon.src = "./assets/icons/check-bold.svg";
-		completeBtn.appendChild(checkIcon);
-	}
-
-	completeBtn.addEventListener("click", () => {
+	completeBtn.addEventListener("click", (e) => {
+		e.stopPropagation();
 		task.completed = !task.completed;
 		reorderTasks(task);
 		saveToStorage();
 		renderBoard();
 	});
-
-	// Delete button
-	const deleteBtn = document.createElement("button");
-	deleteBtn.classList.add("delete-btn-icon");
-	const trashIcon = document.createElement("img");
-	trashIcon.src = "./assets/icons/trash-duotone.svg";
-	deleteBtn.appendChild(trashIcon);
 
 	deleteBtn.addEventListener("click", () => {
 		taskList = taskList.filter((t) => t.id !== task.id);
@@ -285,16 +188,100 @@ function createTaskCard(task) {
 		renderBoard();
 	});
 
-	// New task animation
+	let startX = 0;
+	let currentX = 0;
+	const threshold = -60;
+	const autoDeleteThreshold = -150;
+
+	card.addEventListener(
+		"touchstart",
+		(e) => {
+			startX = e.touches[0].clientX;
+			card.classList.add("swiping");
+		},
+		{ passive: true },
+	);
+
+	card.addEventListener(
+		"touchmove",
+		(e) => {
+			currentX = e.touches[0].clientX - startX;
+			if (currentX > 0) currentX = 0;
+			contentWrapper.style.transform = `translateX(${currentX}px)`;
+			deleteBtn.style.transform = `translateX(${currentX}px)`;
+			deleteBtn.style.opacity = Math.abs(currentX) / 60;
+		},
+		{ passive: true },
+	);
+
+	card.addEventListener("touchend", () => {
+		card.classList.remove("swiping");
+		if (currentX < autoDeleteThreshold) {
+			taskList = taskList.filter((t) => t.id !== task.id);
+			saveToStorage();
+			renderBoard();
+		} else if (currentX < threshold) {
+			contentWrapper.style.transform = `translateX(${threshold}px)`;
+			deleteBtn.style.transform = `translateX(${threshold}px)`;
+			deleteBtn.style.opacity = "1";
+		} else {
+			contentWrapper.style.transform = "";
+			deleteBtn.style.transform = "";
+			deleteBtn.style.opacity = "0";
+		}
+	});
+
 	if (task.id === lastCreatedTaskId) {
 		card.classList.add("is-new");
-		requestAnimationFrame(() => {
-			card.classList.remove("is-new");
-		});
+		requestAnimationFrame(() => card.classList.remove("is-new"));
 	}
 
-	card.append(completeBtn, contentWrapper, deleteBtn);
+	updateDeadlineLogic(task, deadlineView, deadlineInput);
+
 	return card;
+}
+
+function updateDeadlineLogic(task, deadlineView, deadlineInput) {
+	const texts = i18n[navigator.language.slice(0, 2)] || i18n.en;
+	function formatDeadline(dateString) {
+		if (!dateString) return "";
+		const date = new Date(dateString);
+		return new Intl.DateTimeFormat("default", {
+			month: "short",
+			day: "numeric",
+			hour: "numeric",
+			minute: "2-digit",
+			hour12: false,
+		}).format(date);
+	}
+	function updateView() {
+		deadlineView.classList.remove("placeholder", "expired");
+		if (!task.deadline) {
+			deadlineView.textContent = texts.deadlinePlaceholder;
+			deadlineView.classList.add("placeholder");
+			return;
+		}
+		deadlineView.textContent = formatDeadline(task.deadline);
+		if (new Date(task.deadline).getTime() < Date.now())
+			deadlineView.classList.add("expired");
+	}
+	deadlineView.addEventListener("click", () => {
+		deadlineView.style.display = "none";
+		deadlineInput.style.display = "inline-block";
+		deadlineInput.value = task.deadline || "";
+		deadlineInput.focus();
+		if (deadlineInput.showPicker) deadlineInput.showPicker();
+	});
+	deadlineInput.addEventListener("change", () => {
+		task.deadline = deadlineInput.value ? deadlineInput.value + ":00" : "";
+		saveToStorage();
+		updateView();
+	});
+	deadlineInput.addEventListener("blur", () => {
+		deadlineInput.style.display = "none";
+		deadlineView.style.display = "inline-block";
+	});
+	updateView();
 }
 
 // Add a new task to a column
