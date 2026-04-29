@@ -13,7 +13,7 @@ const STATIC_ASSETS = [
 	// Assets
 	"./assets/icons/logo.png",
 	"./assets/icons/logo-no-bg.png",
-	"./assets/icons/check-bold.svg",
+	"./assets/icons/check-circle-fill.svg",
 	"./assets/icons/clock-countdown-fill.svg",
 	"./assets/icons/check-circle-fill.svg",
 	"./assets/icons/plus.svg",
