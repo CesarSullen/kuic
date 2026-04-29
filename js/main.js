@@ -147,7 +147,7 @@ function createTaskCard(task) {
 	card.innerHTML = `
         <div class="task-content-wrapper">
             <button class="complete-btn-checkbox">
-                ${task.completed ? `<img src="./assets/icons/check-square-fill.svg">` : ""}
+                ${task.completed ? `<img src="./assets/icons/check-bold.svg">` : ""}
             </button>
             <div class="task-info-container">
                 <p class="task-title" contenteditable="true">${task.title}</p>
@@ -158,7 +158,7 @@ function createTaskCard(task) {
             </div>
         </div>
         <button class="delete-btn-icon">
-            <img src="./assets/icons/trash-duotone.svg">
+            <img src="./assets/icons/trash.svg">
         </button>
     `;
 

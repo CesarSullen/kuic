@@ -1,4 +1,4 @@
-const CACHE_NAME = "kanban-static-v6.7.4";
+const CACHE_NAME = "kanban-static-v6.7.5";
 const DATA_CACHE_NAME = "kanban-data-v5.1";
 
 const STATIC_ASSETS = [
@@ -11,16 +11,15 @@ const STATIC_ASSETS = [
 	"./manifest.json",
 
 	// Assets
-	"./assets/icons/logo.png",
-	"./assets/icons/logo-no-bg.png",
+	"./assets/icons/check-bold.svg",
 	"./assets/icons/check-circle-fill.svg",
 	"./assets/icons/clock-countdown-fill.svg",
-	"./assets/icons/check-circle-fill.svg",
-	"./assets/icons/plus.svg",
-	"./assets/icons/trash-duotone.svg",
-	"./assets/icons/trash.svg",
 	"./assets/icons/cloud-arrow-down-fill.svg",
 	"./assets/icons/cloud-arrow-up-fill.svg",
+	"./assets/icons/logo-no-bg.png",
+	"./assets/icons/logo.png",
+	"./assets/icons/plus.svg",
+	"./assets/icons/trash.svg",
 
 	// Screenshots
 	"./assets/screenshots/mobile-1.png",
