@@ -367,7 +367,7 @@ section {
 	background-color: var(--dark-light);
 	padding: var(--padding-small);
 
-	transition: transform 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+	transition: transform 0.3s ease;
 	width: 100%;
 	display: flex;
 	align-items: center;
@@ -387,6 +387,7 @@ section {
 .task-card.completed .deadline-view {
 	opacity: 0.6;
 	color: var(--text-light) !important;
+	background-color: var(--dark-bg);
 	border-color: var(--dark-bg) !important;
 	text-decoration: line-through;
 }

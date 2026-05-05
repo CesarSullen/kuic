@@ -2,7 +2,7 @@
 
 ## Description
 
-A Kanban-style task app that works **offline**, is **privacy-first**, and **local-first**.
+A **privacy-first** Kanban-style task app that works **offline**.
 
 ## Features
 

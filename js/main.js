@@ -190,45 +190,82 @@ function createTaskCard(task) {
 
 	let startX = 0;
 	let currentX = 0;
-	const threshold = -60;
-	const autoDeleteThreshold = -150;
+	let isDragging = false;
 
-	card.addEventListener(
-		"touchstart",
-		(e) => {
-			startX = e.touches[0].clientX;
-			card.classList.add("swiping");
-		},
-		{ passive: true },
-	);
+	const startDrag = (e) => {
+		if (e.target.classList.contains("task-title")) {
+			return;
+		}
 
-	card.addEventListener(
-		"touchmove",
-		(e) => {
-			currentX = e.touches[0].clientX - startX;
-			if (currentX > 0) currentX = 0;
+		isDragging = true;
+		startX = e.type === "touchstart" ? e.touches[0].clientX : e.clientX;
+		card.classList.add("swiping");
+	};
+
+	const moveDrag = (e) => {
+		if (!isDragging) return;
+		const x = e.type === "touchmove" ? e.touches[0].clientX : e.clientX;
+		const diff = x - startX;
+
+		if (diff < 0) {
+			// Only swipe to the left
+			currentX = diff;
+
+			// Security Filter
+			if (currentX > -30) {
+				contentWrapper.style.transform = "translateX(0px)";
+				deleteBtn.style.opacity = "0";
+				return;
+			}
+
+			if (navigator.vibrate && currentX <= -250) {
+				navigator.vibrate(10);
+			}
+
 			contentWrapper.style.transform = `translateX(${currentX}px)`;
 			deleteBtn.style.transform = `translateX(${currentX}px)`;
-			deleteBtn.style.opacity = Math.abs(currentX) / 60;
-		},
-		{ passive: true },
-	);
+			// Progressive opacity
+			deleteBtn.style.opacity = Math.min(Math.abs(currentX) / 100, 1);
+		}
+	};
 
-	card.addEventListener("touchend", () => {
+	const stopDrag = () => {
+		if (!isDragging) return;
+		isDragging = false;
 		card.classList.remove("swiping");
-		if (currentX < autoDeleteThreshold) {
+
+		if (currentX < -250) {
+			// Auto-delete
 			taskList = taskList.filter((t) => t.id !== task.id);
 			saveToStorage();
 			renderBoard();
-		} else if (currentX < threshold) {
-			contentWrapper.style.transform = `translateX(${threshold}px)`;
-			deleteBtn.style.transform = `translateX(${threshold}px)`;
+		} else if (currentX < -70) {
+			// Pin button
+			contentWrapper.style.transform = `translateX(-70px)`;
+			deleteBtn.style.transform = `translateX(-70px)`;
 			deleteBtn.style.opacity = "1";
 		} else {
+			// Cancel
 			contentWrapper.style.transform = "";
 			deleteBtn.style.transform = "";
 			deleteBtn.style.opacity = "0";
 		}
+
+		window.removeEventListener("mousemove", moveDrag);
+		window.removeEventListener("mouseup", stopDrag);
+		currentX = 0;
+	};
+
+	// Phone
+	card.addEventListener("touchstart", startDrag, { passive: true });
+	card.addEventListener("touchmove", moveDrag, { passive: true });
+	card.addEventListener("touchend", stopDrag);
+
+	// PC
+	card.addEventListener("mousedown", (e) => {
+		startDrag(e);
+		window.addEventListener("mousemove", moveDrag);
+		window.addEventListener("mouseup", stopDrag);
 	});
 
 	if (task.id === lastCreatedTaskId) {
@@ -483,7 +520,7 @@ async function trackProjectActivity(projectName) {
 	}
 }
 
-trackProjectActivity("Kuic");
+// trackProjectActivity("Kuic");
 
 // Service Worker setup
 if ("serviceWorker" in navigator) {
