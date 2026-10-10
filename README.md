@@ -1,24 +1,26 @@
-# Kanban Board
+# Kuic
 
 ## Description
 
-A **privacy-first** Kanban-style task app that works **offline**.
+A **privacy-first** task list app that works **offline**.
 
 ## Features
 
-- Create, edit, and delete columns and tasks
-- Set due dates for tasks
-- Mark tasks as completed or delete them
+- Create, edit, and delete lists and tasks
+- Mark tasks as completed (with animation), or swipe a task left to delete it, with an undo option
+- One list per screen: swipe between lists or use the tabs, the "+" next to the tabs creates a new list
+- Search tasks and filter them by pending or completed
+- Settings screen to rename or delete lists, import or export your data, and see the app version
 - **Dynamic counters** for pending and completed tasks
 - Import / Export data in JSON format
 - Offline-first using Local Storage and Cache Storage
 - Optimized for desktop and mobile
-- Notifications for tasks with due dates (only if app is open, sorry, I don't make the rules)
 
 ## Privacy and Data
 
-All data is stored **locally** in the browser (Local Storage and Cache Storage).  
-No information is sent to any external server.
+Your lists and tasks are stored **locally** in your browser (Local Storage). Cache Storage only holds the app files so it works offline. Your tasks are never sent to any server.
+
+The only thing the app sends is a visit counter increment to [Supabase](https://supabase.com) each time it is opened. It contains just the project name ("Kuic"), so I can get an idea of how much the app is used. It does not include your tasks nor any identifier of who you are.
 
 ## Technologies
 
@@ -26,6 +28,7 @@ No information is sent to any external server.
 - Service Worker for PWA
 - Local Storage for data persistence
 - Cache Storage for offline-first
+- Supabase (anonymous visit counter only)
 - Web App Manifest → proper PWA install experience
 
 ## Try KUIC

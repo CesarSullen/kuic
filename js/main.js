@@ -1,125 +1,89 @@
-// Detect user language
-const userLang = navigator.language || navigator.userLanguage;
-const lang = userLang.slice(0, 2); // "es" or "en"
+// Default texts
+const DEFAULT_TASK_TITLE = "Nueva tarea";
+const DEFAULT_COLUMN_NAME = "Nueva lista";
 
-// i18n dictionary
-const i18n = {
-	en: {
-		newColumn: "New list",
-		pendingTasks: "Pending",
-		completedTasks: "Completed",
-		deleteColumn: "Delete this column? Tasks will be permanently deleted.",
-		newTask: "New Task",
-		complete: "Complete",
-		delete: "Delete",
-		completed: "Completed",
-		deadlinePlaceholder: "Due date",
-		import: "Import",
-		export: "Export",
-		exportSuccess: "Export complete",
-		importSuccess: "Import complete",
-		invalidFile: "Invalid file",
-		fileReadError: "Error reading file: ",
-	},
-	es: {
-		newColumn: "Nueva lista",
-		pendingTasks: "Pendientes",
-		completedTasks: "Completadas",
-		deleteColumn:
-			"¿Eliminar esta columna? Las tareas se eliminarán permanentemente.",
-		newTask: "Nueva tarea",
-		complete: "Completar",
-		delete: "Eliminar",
-		completed: "Completada",
-		deadlinePlaceholder: "Fecha límite",
-		import: "Importar",
-		export: "Exportar",
-		exportSuccess: "Exportación completa",
-		importSuccess: "Importación completa",
-		invalidFile: "Archivo inválido",
-		fileReadError: "Error leyendo el archivo: ",
-	},
-};
+// Delay before a completed task moves
+const REORDER_DELAY = 600;
 
-// Select texts for current language
-const texts = i18n[lang] || i18n.en;
+// Main elements
+const board = document.querySelector(".task-board");
+const listTabs = document.getElementById("listTabs");
+const searchInput = document.getElementById("searchInput");
+const searchClear = document.getElementById("searchClear");
+const statTiles = document.querySelectorAll(".task-stat");
 
-// Data structures for columns and tasks
+// Default data for first-time users
 let columnList = [
-	{ id: "pending", name: "PENDING" },
-	{ id: "inprogress", name: "IN PROGRESS" },
-	{ id: "completed", name: "COMPLETED" },
+	{ id: "pending", name: "PENDIENTES" },
+	{ id: "inprogress", name: "EN PROGRESO" },
+	{ id: "completed", name: "COMPLETADAS" },
 ];
 
 let taskList = [
 	{
 		id: "task1",
-		title: "Review Q4 budget report",
+		title: "Revisar el informe de presupuesto",
 		columnId: "pending",
 		completed: false,
-		deadline: "",
-		notified: false,
 	},
 	{
 		id: "task2",
-		title: "Design new landing page",
+		title: "Diseñar la nueva página de inicio",
 		columnId: "inprogress",
 		completed: false,
-		deadline: "",
-		notified: false,
 	},
 	{
 		id: "task3",
-		title: "Launch email campaign",
+		title: "Lanzar la campaña de correo",
 		columnId: "completed",
 		completed: true,
-		deadline: "",
-		notified: false,
 	},
 ];
 
+// View state (not saved)
+let searchQuery = "";
+let filterMode = "all";
+let activeColumnId = null;
+let scrollingToId = null;
 let lastCreatedTaskId = null;
+
+// Closer of the swiped-open card
+let closeOpenCard = null;
+
+// Reorder timers by task id
+const reorderTimers = new Map();
 
 // Update task counters
 function updateTaskCounters() {
 	const pendingCount = taskList.filter((t) => !t.completed).length;
 	const completedCount = taskList.filter((t) => t.completed).length;
 
-	const pendingNumEl = document.querySelector(".tasks-pending-number");
-	const completedNumEl = document.querySelector(".tasks-completed-number");
-
-	if (pendingNumEl) pendingNumEl.textContent = pendingCount;
-	if (completedNumEl) completedNumEl.textContent = completedCount;
-
-	console.log("pending: " + pendingCount + ", completed: " + completedCount);
+	document.querySelector(".tasks-pending-number").textContent = pendingCount;
+	document.querySelector(".tasks-completed-number").textContent = completedCount;
 }
-
-// Update static HTML buttons with current language
-window.addEventListener("load", () => {
-	const importBtnText = document.getElementById("importBtnText");
-	const exportBtnText = document.getElementById("exportBtnText");
-
-	if (importBtnText) importBtnText.textContent = texts.import;
-	if (exportBtnText) exportBtnText.textContent = texts.export;
-});
 
 // Generate unique IDs
-function generateId(prefix = "id") {
-	return `${prefix}-${Date.now()}`;
+function generateId() {
+	if (crypto.randomUUID) return crypto.randomUUID();
+	return `${Date.now()}-${Math.random().toString(36).slice(2)}`;
 }
 
-// Save/load data to localStorage
+// Save data to localStorage
 function saveToStorage() {
 	localStorage.setItem("columns", JSON.stringify(columnList));
 	localStorage.setItem("tasks", JSON.stringify(taskList));
-	syncTasksToSW(taskList);
 }
 
+// Load data from localStorage
 function loadFromStorage() {
-	const savedColumns = localStorage.getItem("columns");
-	const savedTasks = localStorage.getItem("tasks");
-	if (savedColumns) columnList = JSON.parse(savedColumns);
-	if (savedTasks) taskList = JSON.parse(savedTasks);
+	try {
+		const savedColumns = localStorage.getItem("columns");
+		const savedTasks = localStorage.getItem("tasks");
+		if (savedColumns) columnList = JSON.parse(savedColumns);
+		if (savedTasks) taskList = JSON.parse(savedTasks);
+	} catch (err) {
+		console.error("Could not read saved data:", err);
+	}
 }
 
 // Reorder tasks when toggling completed state
@@ -137,199 +101,261 @@ function reorderTasks(task) {
 	}
 }
 
+// Normalize text for searching
+function normalizeText(text) {
+	return text
+		.toLowerCase()
+		.normalize("NFD")
+		.replace(/[\u0300-\u036f]/g, "");
+}
+
+// Check if a search or filter is active
+function isFiltering() {
+	return searchQuery !== "" || filterMode !== "all";
+}
+
+// Get the visible tasks of a column
+function getVisibleTasks(columnId) {
+	return taskList.filter((task) => {
+		if (task.columnId !== columnId) return false;
+		if (filterMode === "pending" && task.completed) return false;
+		if (filterMode === "completed" && !task.completed) return false;
+		return !searchQuery || normalizeText(task.title).includes(searchQuery);
+	});
+}
+
+// Highlight the active filter tile
+function updateFilterUI() {
+	statTiles.forEach((tile) => {
+		tile.classList.toggle("active", tile.dataset.filter === filterMode);
+	});
+}
+
+// Clear search and filter
+function resetViewFilters() {
+	searchQuery = "";
+	filterMode = "all";
+	searchInput.value = "";
+	searchClear.hidden = true;
+	updateFilterUI();
+}
+
+// Close editing with Enter and restore default if empty
+function setupEditableText(element, defaultText, onSave) {
+	element.addEventListener("keydown", (e) => {
+		if (e.key === "Enter") {
+			e.preventDefault();
+			element.blur();
+		}
+	});
+
+	element.addEventListener("blur", () => {
+		const value = element.textContent.trim() || defaultText;
+		element.textContent = value;
+		onSave(value);
+	});
+}
+
+// Close the swiped card on outside touch
+document.addEventListener("pointerdown", (e) => {
+	if (closeOpenCard && !e.target.closest(".task-card.open")) closeOpenCard();
+});
+
+// Swipe a card to reveal delete
+function setupSwipe(card, content, deleteBtn, title) {
+	let startX = 0;
+	let startY = 0;
+	let baseX = 0;
+	let currentX = 0;
+	let axis = null;
+	let tracking = false;
+
+	const revealWidth = () => deleteBtn.offsetWidth;
+
+	function close() {
+		setOpen(false);
+	}
+
+	// Open or close the delete area
+	function setOpen(open) {
+		card.classList.remove("swiping");
+		card.classList.toggle("open", open);
+		content.style.transform = open ? `translateX(-${revealWidth()}px)` : "";
+
+		if (open) {
+			if (closeOpenCard && closeOpenCard !== close) closeOpenCard();
+			closeOpenCard = close;
+		} else if (closeOpenCard === close) {
+			closeOpenCard = null;
+		}
+	}
+
+	card.addEventListener("pointerdown", (e) => {
+		if (!e.isPrimary || (e.pointerType === "mouse" && e.button !== 0)) return;
+		if (e.target.closest("button") || document.activeElement === title) return;
+		if (e.pointerType === "mouse" && e.target.closest(".task-title")) return;
+
+		startX = e.clientX;
+		startY = e.clientY;
+		baseX = card.classList.contains("open") ? -revealWidth() : 0;
+		currentX = baseX;
+		axis = null;
+		tracking = true;
+	});
+
+	card.addEventListener("pointermove", (e) => {
+		if (!tracking) return;
+		const dx = e.clientX - startX;
+		const dy = e.clientY - startY;
+
+		// Lock gesture direction
+		if (!axis) {
+			if (Math.abs(dx) < 8 && Math.abs(dy) < 8) return;
+			axis = Math.abs(dx) > Math.abs(dy) ? "x" : "y";
+			if (axis === "x") {
+				card.setPointerCapture(e.pointerId);
+				card.classList.add("swiping");
+			}
+		}
+		if (axis !== "x") return;
+
+		currentX = Math.min(0, Math.max(-revealWidth(), baseX + dx));
+		content.style.transform = `translateX(${currentX}px)`;
+	});
+
+	const endGesture = (e) => {
+		if (!tracking) return;
+		tracking = false;
+
+		if (axis === "x") {
+			// Snap open or closed
+			setOpen(currentX < -revealWidth() / 2);
+		} else if (axis === null && e.type === "pointerup" && card.classList.contains("open")) {
+			// Tapping an opened card closes it
+			setOpen(false);
+		}
+		axis = null;
+	};
+
+	card.addEventListener("pointerup", endGesture);
+	card.addEventListener("pointercancel", endGesture);
+}
+
 // Create a task card element
 function createTaskCard(task) {
 	const card = document.createElement("div");
-	card.classList.add("task-card", task.columnId);
+	card.classList.add("task-card");
 	card.dataset.taskId = task.id;
 	card.classList.toggle("completed", task.completed);
 
+	// Card structure
 	card.innerHTML = `
-        <div class="task-content-wrapper">
-            <button class="complete-btn-checkbox">
-                ${task.completed ? `<img src="./assets/icons/check-bold.svg">` : ""}
-            </button>
-            <div class="task-info-container">
-                <p class="task-title" contenteditable="true">${task.title}</p>
-                <div class="deadline-wrapper">
-                    <span class="deadline-view"></span>
-                    <input type="datetime-local" class="deadline-input" style="display:none">
-                </div>
-            </div>
-        </div>
-        <button class="delete-btn-icon">
-            <img src="./assets/icons/trash.svg">
-        </button>
-    `;
+		<div class="task-content-wrapper">
+			<button class="complete-btn-checkbox" aria-label="Completar tarea">
+				<img src="./assets/icons/check-bold.svg" alt="">
+			</button>
+			<div class="task-info-container">
+				<p class="task-title" contenteditable="true"></p>
+			</div>
+		</div>
+		<button class="delete-btn-icon" aria-label="Eliminar tarea">
+			<img src="./assets/icons/trash.svg" alt="">
+		</button>
+	`;
 
-	const contentWrapper = card.querySelector(".task-content-wrapper");
+	const content = card.querySelector(".task-content-wrapper");
 	const title = card.querySelector(".task-title");
 	const completeBtn = card.querySelector(".complete-btn-checkbox");
 	const deleteBtn = card.querySelector(".delete-btn-icon");
-	const deadlineView = card.querySelector(".deadline-view");
-	const deadlineInput = card.querySelector(".deadline-input");
 
+	title.textContent = task.title;
+	title.dataset.placeholder = DEFAULT_TASK_TITLE;
+
+	// Toggle the empty title placeholder
+	const updatePlaceholder = () => {
+		title.classList.toggle("is-empty", title.textContent === "");
+	};
+	updatePlaceholder();
+
+	// Save the title while typing
 	title.addEventListener("input", () => {
 		task.title = title.textContent.trimEnd();
+		updatePlaceholder();
 		saveToStorage();
 	});
 
-	completeBtn.addEventListener("click", (e) => {
-		e.stopPropagation();
+	// Restore default title if empty
+	setupEditableText(title, DEFAULT_TASK_TITLE, (value) => {
+		task.title = value;
+		updatePlaceholder();
+		saveToStorage();
+	});
+
+	completeBtn.addEventListener("click", () => {
+		// Toggle completed state in place
 		task.completed = !task.completed;
-		reorderTasks(task);
+		card.classList.toggle("completed", task.completed);
 		saveToStorage();
-		renderBoard();
+		updateTaskCounters();
+
+		// Move the task after a short delay
+		clearTimeout(reorderTimers.get(task.id));
+		reorderTimers.set(
+			task.id,
+			setTimeout(() => {
+				reorderTimers.delete(task.id);
+				if (!taskList.includes(task)) return;
+
+				reorderTasks(task);
+				saveToStorage();
+				renderBoardAnimated();
+			}, REORDER_DELAY),
+		);
 	});
 
-	deleteBtn.addEventListener("click", () => {
-		taskList = taskList.filter((t) => t.id !== task.id);
-		saveToStorage();
-		renderBoard();
-	});
+	deleteBtn.addEventListener("click", () => deleteTask(task));
 
-	let startX = 0;
-	let currentX = 0;
-	let isDragging = false;
+	setupSwipe(card, content, deleteBtn, title);
 
-	const startDrag = (e) => {
-		if (e.target.classList.contains("task-title")) {
-			return;
-		}
-
-		isDragging = true;
-		startX = e.type === "touchstart" ? e.touches[0].clientX : e.clientX;
-		card.classList.add("swiping");
-	};
-
-	const moveDrag = (e) => {
-		if (!isDragging) return;
-		const x = e.type === "touchmove" ? e.touches[0].clientX : e.clientX;
-		const diff = x - startX;
-
-		if (diff < 0) {
-			// Only swipe to the left
-			currentX = diff;
-
-			// Security Filter
-			if (currentX > -30) {
-				contentWrapper.style.transform = "translateX(0px)";
-				deleteBtn.style.opacity = "0";
-				return;
-			}
-
-			if (navigator.vibrate && currentX <= -250) {
-				navigator.vibrate(10);
-			}
-
-			contentWrapper.style.transform = `translateX(${currentX}px)`;
-			deleteBtn.style.transform = `translateX(${currentX}px)`;
-			// Progressive opacity
-			deleteBtn.style.opacity = Math.min(Math.abs(currentX) / 100, 1);
-		}
-	};
-
-	const stopDrag = () => {
-		if (!isDragging) return;
-		isDragging = false;
-		card.classList.remove("swiping");
-
-		if (currentX < -250) {
-			// Auto-delete
-			taskList = taskList.filter((t) => t.id !== task.id);
-			saveToStorage();
-			renderBoard();
-		} else if (currentX < -70) {
-			// Pin button
-			contentWrapper.style.transform = `translateX(-70px)`;
-			deleteBtn.style.transform = `translateX(-70px)`;
-			deleteBtn.style.opacity = "1";
-		} else {
-			// Cancel
-			contentWrapper.style.transform = "";
-			deleteBtn.style.transform = "";
-			deleteBtn.style.opacity = "0";
-		}
-
-		window.removeEventListener("mousemove", moveDrag);
-		window.removeEventListener("mouseup", stopDrag);
-		currentX = 0;
-	};
-
-	// Phone
-	card.addEventListener("touchstart", startDrag, { passive: true });
-	card.addEventListener("touchmove", moveDrag, { passive: true });
-	card.addEventListener("touchend", stopDrag);
-
-	// PC
-	card.addEventListener("mousedown", (e) => {
-		startDrag(e);
-		window.addEventListener("mousemove", moveDrag);
-		window.addEventListener("mouseup", stopDrag);
-	});
-
+	// Play the entrance animation for new tasks
 	if (task.id === lastCreatedTaskId) {
 		card.classList.add("is-new");
 		requestAnimationFrame(() => card.classList.remove("is-new"));
 	}
 
-	updateDeadlineLogic(task, deadlineView, deadlineInput);
-
 	return card;
 }
 
-function updateDeadlineLogic(task, deadlineView, deadlineInput) {
-	const texts = i18n[navigator.language.slice(0, 2)] || i18n.en;
-	function formatDeadline(dateString) {
-		if (!dateString) return "";
-		const date = new Date(dateString);
-		return new Intl.DateTimeFormat("default", {
-			month: "short",
-			day: "numeric",
-			hour: "numeric",
-			minute: "2-digit",
-			hour12: false,
-		}).format(date);
-	}
-	function updateView() {
-		deadlineView.classList.remove("placeholder", "expired");
-		if (!task.deadline) {
-			deadlineView.textContent = texts.deadlinePlaceholder;
-			deadlineView.classList.add("placeholder");
-			return;
-		}
-		deadlineView.textContent = formatDeadline(task.deadline);
-		if (new Date(task.deadline).getTime() < Date.now())
-			deadlineView.classList.add("expired");
-	}
-	deadlineView.addEventListener("click", () => {
-		deadlineView.style.display = "none";
-		deadlineInput.style.display = "inline-block";
-		deadlineInput.value = task.deadline || "";
-		deadlineInput.focus();
-		if (deadlineInput.showPicker) deadlineInput.showPicker();
-	});
-	deadlineInput.addEventListener("change", () => {
-		task.deadline = deadlineInput.value ? deadlineInput.value + ":00" : "";
-		saveToStorage();
-		updateView();
-	});
-	deadlineInput.addEventListener("blur", () => {
-		deadlineInput.style.display = "none";
-		deadlineView.style.display = "inline-block";
-	});
-	updateView();
+// Focus a task title with the caret at the end
+function focusTaskTitle(taskId) {
+	const titleEl = document.querySelector(
+		`.task-card[data-task-id="${taskId}"] .task-title`,
+	);
+	if (!titleEl) return;
+
+	titleEl.focus({ preventScroll: true });
+
+	const range = document.createRange();
+	range.selectNodeContents(titleEl);
+	range.collapse(false);
+
+	const selection = window.getSelection();
+	selection.removeAllRanges();
+	selection.addRange(range);
+
+	titleEl.scrollIntoView({ behavior: "smooth", block: "center" });
 }
 
 // Add a new task to a column
 function addTaskToColumn(columnId) {
+	// Clear search and filter first
+	if (isFiltering()) resetViewFilters();
+
 	const newTask = {
-		id: generateId("task"),
-		title: texts.newTask,
+		id: generateId(),
+		title: "",
 		columnId: columnId,
 		completed: false,
-		deadline: "",
-		notified: false,
 	};
 
 	taskList.push(newTask);
@@ -337,177 +363,548 @@ function addTaskToColumn(columnId) {
 
 	renderBoard();
 	saveToStorage();
+
+	lastCreatedTaskId = null;
+	focusTaskTitle(newTask.id);
 }
 
-// Delete a column
-function deleteColumn(columnId) {
-	if (!confirm(texts.deleteColumn)) return;
+// Delete a task and offer to undo it
+function deleteTask(task) {
+	const index = taskList.indexOf(task);
+	if (index === -1) return;
 
+	taskList.splice(index, 1);
+	saveToStorage();
+	renderBoard();
+
+	showToast("Tarea eliminada", {
+		actionText: "Deshacer",
+		onAction: () => {
+			taskList.splice(Math.min(index, taskList.length), 0, task);
+			saveToStorage();
+			renderBoard();
+		},
+	});
+}
+
+// Delete a column after asking for confirmation
+async function deleteColumn(columnId) {
+	const confirmed = await openDialog({
+		title: "Eliminar lista",
+		message: "Se eliminarán también todas sus tareas. Esta acción no se puede deshacer.",
+		confirmText: "Eliminar",
+		danger: true,
+	});
+	if (!confirmed) return;
+
+	const index = columnList.findIndex((col) => col.id === columnId);
 	taskList = taskList.filter((task) => task.columnId !== columnId);
 	columnList = columnList.filter((col) => col.id !== columnId);
 
+	// Select a neighbour list
+	if (activeColumnId === columnId) {
+		const next = columnList[Math.min(index, columnList.length - 1)];
+		activeColumnId = next ? next.id : null;
+	}
+
 	renderBoard();
+	renderSettingsLists();
 	saveToStorage();
 }
 
-// Render the board
-function renderBoard() {
-	const board = document.querySelector(".kanban-board");
-	board.innerHTML = "";
+// Get scroll position to center a tab
+function getTabsScrollTarget(tab) {
+	return tab.offsetLeft - (listTabs.clientWidth - tab.offsetWidth) / 2;
+}
+
+// Render the list tabs
+function renderTabs() {
+	listTabs.innerHTML = "";
 
 	columnList.forEach((column) => {
+		const tab = document.createElement("button");
+		tab.classList.add("list-tab");
+		tab.classList.toggle("active", column.id === activeColumnId);
+		tab.dataset.columnId = column.id;
+		tab.textContent = column.name;
+
+		// Show match count on the tab
+		if (isFiltering()) {
+			const count = document.createElement("span");
+			count.classList.add("tab-count");
+			count.textContent = getVisibleTasks(column.id).length;
+			tab.appendChild(count);
+		}
+
+		tab.addEventListener("click", () => goToColumn(column.id));
+		listTabs.appendChild(tab);
+	});
+
+	// Add list button
+	const addTab = document.createElement("button");
+	addTab.classList.add("list-tab", "list-tab-add");
+	addTab.setAttribute("aria-label", "Nueva lista");
+	addTab.innerHTML = `<img src="./assets/icons/plus.svg" alt="">`;
+	addTab.addEventListener("click", createList);
+	listTabs.appendChild(addTab);
+
+	const activeTab = listTabs.querySelector(".list-tab.active");
+	if (activeTab) listTabs.scrollLeft = getTabsScrollTarget(activeTab);
+}
+
+// Set the active list
+function setActiveColumn(columnId, scrollBoard) {
+	activeColumnId = columnId;
+
+	listTabs.querySelectorAll(".list-tab").forEach((tab) => {
+		const isActive = tab.dataset.columnId === columnId;
+		tab.classList.toggle("active", isActive);
+		if (isActive) {
+			listTabs.scrollTo({ left: getTabsScrollTarget(tab), behavior: "smooth" });
+		}
+	});
+
+	if (scrollBoard) {
+		const index = columnList.findIndex((c) => c.id === columnId);
+		board.scrollTo({ left: index * board.clientWidth, behavior: "smooth" });
+	}
+}
+
+// Go to a list from a tab tap
+function goToColumn(columnId) {
+	scrollingToId = columnId;
+	setTimeout(() => (scrollingToId = null), 800);
+	setActiveColumn(columnId, true);
+}
+
+// Update active list on swipe
+let scrollFramePending = false;
+board.addEventListener("scroll", () => {
+	if (scrollFramePending) return;
+	scrollFramePending = true;
+
+	requestAnimationFrame(() => {
+		scrollFramePending = false;
+		const column = columnList[Math.round(board.scrollLeft / board.clientWidth)];
+		if (!column) return;
+
+		// Ignore lists passed during tab scroll
+		if (scrollingToId) {
+			if (column.id === scrollingToId) scrollingToId = null;
+			return;
+		}
+		if (column.id !== activeColumnId) setActiveColumn(column.id, false);
+	});
+});
+
+// Render the board
+function renderBoard() {
+	board.innerHTML = "";
+	closeOpenCard = null;
+
+	// Keep the active list valid
+	if (!columnList.some((c) => c.id === activeColumnId)) {
+		activeColumnId = columnList.length ? columnList[0].id : null;
+	}
+
+	if (columnList.length === 0) {
+		const emptyBoard = document.createElement("p");
+		emptyBoard.classList.add("empty-board");
+		emptyBoard.textContent = "No tienes listas. Toca + para crear una.";
+		board.appendChild(emptyBoard);
+	}
+
+	columnList.forEach((column) => {
+		const page = document.createElement("div");
+		page.classList.add("column-page");
+
 		const section = document.createElement("section");
-		section.classList.add("column", `${column.id}-column`);
-
-		const header = document.createElement("div");
-		header.classList.add("column-header");
-
-		const title = document.createElement("h2");
-		title.classList.add("column-title");
-		title.contentEditable = true;
-		title.textContent = column.name;
-		title.addEventListener("input", () => {
-			column.name = title.textContent.trimEnd();
-			saveToStorage();
-		});
-
-		const plusIcon = document.createElement("img");
-		plusIcon.src = "./assets/icons/plus.svg";
-		plusIcon.classList.add("column-action");
-		plusIcon.addEventListener("click", () => addTaskToColumn(column.id));
-
-		const trashIcon = document.createElement("img");
-		trashIcon.src = "./assets/icons/trash.svg";
-		trashIcon.classList.add("column-action");
-		trashIcon.addEventListener("click", () => deleteColumn(column.id));
-
-		header.append(title, plusIcon, trashIcon);
+		section.classList.add("column");
 
 		const body = document.createElement("div");
 		body.classList.add("column-body");
 		body.dataset.columnId = column.id;
 
-		taskList
-			.filter((task) => task.columnId === column.id)
-			.forEach((task) => body.appendChild(createTaskCard(task)));
-
-		section.append(header, body);
-		board.appendChild(section);
-
-		// Focus newly created task
-		if (lastCreatedTaskId) {
-			requestAnimationFrame(() => {
-				const titleEl = document.querySelector(
-					`.task-card[data-task-id="${lastCreatedTaskId}"] .task-title`,
-				);
-				if (!titleEl) return;
-
-				titleEl.scrollIntoView({ behavior: "smooth", block: "center" });
-				titleEl.focus({ preventScroll: true });
-
-				const range = document.createRange();
-				range.selectNodeContents(titleEl);
-				range.collapse(false);
-
-				const selection = window.getSelection();
-				selection.removeAllRanges();
-				selection.addRange(range);
-
-				lastCreatedTaskId = null;
-			});
+		const visibleTasks = getVisibleTasks(column.id);
+		if (visibleTasks.length === 0) {
+			const emptyState = document.createElement("p");
+			emptyState.classList.add("empty-state");
+			emptyState.textContent = isFiltering() ? "Sin resultados" : "Sin tareas";
+			body.appendChild(emptyState);
+		} else {
+			visibleTasks.forEach((task) => body.appendChild(createTaskCard(task)));
 		}
+
+		section.append(body);
+		page.appendChild(section);
+		board.appendChild(page);
 	});
+
+	renderTabs();
 	updateTaskCounters();
+
+	// Restore the active list position
+	const activeIndex = columnList.findIndex((c) => c.id === activeColumnId);
+	board.scrollLeft = Math.max(0, activeIndex) * board.clientWidth;
 }
 
-// Add a new column
-document.getElementById("newColumnBtn").addEventListener("click", () => {
-	const newId = generateId("col");
-	const newName = prompt(texts.newColumn) || texts.newColumn;
-	columnList.push({ id: newId, name: newName });
+// Render the board animating moved tasks
+function renderBoardAnimated() {
+	const oldTops = new Map();
+	document.querySelectorAll(".task-card").forEach((card) => {
+		oldTops.set(card.dataset.taskId, card.getBoundingClientRect().top);
+	});
+
+	renderBoard();
+
+	// Animate cards to their new position
+	const movedCards = [];
+	document.querySelectorAll(".task-card").forEach((card) => {
+		const oldTop = oldTops.get(card.dataset.taskId);
+		if (oldTop === undefined) return;
+
+		const delta = oldTop - card.getBoundingClientRect().top;
+		if (!delta) return;
+
+		card.style.transition = "none";
+		card.style.transform = `translateY(${delta}px)`;
+		movedCards.push(card);
+	});
+	if (movedCards.length === 0) return;
+
+	board.getBoundingClientRect();
+	requestAnimationFrame(() => {
+		movedCards.forEach((card) => {
+			card.style.transition = "";
+			card.style.transform = "";
+		});
+	});
+}
+
+// Create a new list
+async function createList() {
+	const name = await openDialog({
+		title: "Nueva lista",
+		withInput: true,
+		confirmText: "Crear",
+	});
+	if (name === null) return;
+
+	const newColumn = { id: generateId(), name: name || DEFAULT_COLUMN_NAME };
+	columnList.push(newColumn);
+	activeColumnId = newColumn.id;
+
 	renderBoard();
 	saveToStorage();
-});
-
-// Notifications
-async function notificationPermission() {
-	if (Notification.permission === "granted") {
-		return true;
-	}
-	if (Notification.permission === "denied") {
-		const permission = await Notification.requestPermission();
-		return permission === "granted";
-	}
-	if (Notification.permission === "default") {
-		const permission = await Notification.requestPermission();
-		return permission === "granted";
-	}
-	return false;
 }
 
-// Export & Import Data
-function exportTasks() {
-	const data = {
-		columns: columnList,
-		tasks: taskList,
+// Floating button adds a task
+document.getElementById("addTaskBtn").addEventListener("click", () => {
+	if (activeColumnId) {
+		addTaskToColumn(activeColumnId);
+	} else {
+		createList();
+	}
+});
+
+// Modal dialog elements
+const modalOverlay = document.getElementById("modalOverlay");
+const modalTitle = document.getElementById("modalTitle");
+const modalMessage = document.getElementById("modalMessage");
+const modalInput = document.getElementById("modalInput");
+const modalConfirm = document.getElementById("modalConfirm");
+const modalCancel = document.getElementById("modalCancel");
+
+// Fit the dialog above the keyboard
+function syncOverlayToViewport() {
+	const viewport = window.visualViewport;
+	if (!viewport) return;
+
+	modalOverlay.style.top = `${viewport.offsetTop}px`;
+	modalOverlay.style.height = `${viewport.height}px`;
+}
+
+// Show an in-app dialog
+function openDialog({ title, message = "", withInput = false, confirmText = "Aceptar", danger = false }) {
+	return new Promise((resolve) => {
+		modalTitle.textContent = title;
+		modalMessage.textContent = message;
+		modalMessage.hidden = !message;
+		modalInput.hidden = !withInput;
+		modalInput.value = "";
+		modalConfirm.textContent = confirmText;
+		modalConfirm.classList.toggle("danger", danger);
+		modalOverlay.classList.toggle("with-input", withInput);
+
+		const finish = (result) => {
+			modalOverlay.classList.remove("visible");
+			modalOverlay.inert = true;
+			modalInput.blur();
+
+			window.visualViewport?.removeEventListener("resize", syncOverlayToViewport);
+			window.visualViewport?.removeEventListener("scroll", syncOverlayToViewport);
+			modalOverlay.style.top = "";
+			modalOverlay.style.height = "";
+
+			resolve(result);
+		};
+
+		const confirm = () => finish(withInput ? modalInput.value.trim() : true);
+		const cancel = () => finish(withInput ? null : false);
+
+		modalConfirm.onclick = confirm;
+		modalCancel.onclick = cancel;
+		modalOverlay.onclick = (e) => {
+			if (e.target === modalOverlay) cancel();
+		};
+		modalOverlay.onkeydown = (e) => {
+			if (e.key === "Escape") cancel();
+			if (e.key === "Enter" && e.target === modalInput) confirm();
+		};
+
+		window.visualViewport?.addEventListener("resize", syncOverlayToViewport);
+		window.visualViewport?.addEventListener("scroll", syncOverlayToViewport);
+
+		// Show the dialog and focus the input
+		modalOverlay.inert = false;
+		modalOverlay.classList.add("visible");
+		if (withInput) modalInput.focus();
+	});
+}
+
+// Toast elements
+const toast = document.getElementById("toast");
+const toastText = document.getElementById("toastText");
+const toastAction = document.getElementById("toastAction");
+let toastTimer = null;
+
+// Show a toast message
+function showToast(message, { actionText = "", onAction = null } = {}) {
+	toastText.textContent = message;
+	toastAction.textContent = actionText;
+	toastAction.hidden = !actionText;
+	toast.classList.toggle("has-action", Boolean(actionText));
+
+	toastAction.onclick = () => {
+		toast.classList.remove("visible");
+		clearTimeout(toastTimer);
+		if (onAction) onAction();
 	};
 
-	const json = JSON.stringify(data, null, 2);
-	const blob = new Blob([json], { type: "application/json" });
-	const url = URL.createObjectURL(blob);
+	toast.classList.add("visible");
+	clearTimeout(toastTimer);
+	toastTimer = setTimeout(() => toast.classList.remove("visible"), actionText ? 5000 : 2200);
+}
+
+// Export data as a JSON file
+function exportTasks() {
+	const json = JSON.stringify({ columns: columnList, tasks: taskList }, null, 2);
+	const url = URL.createObjectURL(new Blob([json], { type: "application/json" }));
 
 	const a = document.createElement("a");
 	a.href = url;
 	a.download = "kuic_tasks.json";
-
+	document.body.appendChild(a);
 	a.click();
-	URL.revokeObjectURL(url);
+	a.remove();
 
-	alert(texts.exportSuccess);
+	// Release the file URL
+	setTimeout(() => URL.revokeObjectURL(url), 1000);
+
+	showToast("Exportación completa");
 }
 
-const importBtn = document.getElementById("importBtn");
-const fileInput = document.getElementById("fileInput");
+// Validate imported data
+function parseImportData(data) {
+	if (!data || !Array.isArray(data.columns) || !Array.isArray(data.tasks)) {
+		return null;
+	}
 
-document.getElementById("importBtnText").textContent = texts.import;
-document.getElementById("exportBtnText").textContent = texts.export;
+	const validColumns = data.columns.every(
+		(c) => c && typeof c.id === "string" && c.id && typeof c.name === "string",
+	);
+	if (!validColumns) return null;
 
-importBtn.addEventListener("click", () => {
-	fileInput.click();
-});
-function importTasks(event) {
-	const file = event.target.files[0];
-	if (!file) return;
+	const columnIds = new Set(data.columns.map((c) => c.id));
+	const validTasks = data.tasks.every(
+		(t) =>
+			t &&
+			typeof t.id === "string" &&
+			t.id &&
+			typeof t.title === "string" &&
+			columnIds.has(t.columnId),
+	);
+	if (!validTasks) return null;
 
-	const reader = new FileReader();
-	reader.onload = function (e) {
-		try {
-			const data = JSON.parse(e.target.result);
-
-			if (!data.columns || !data.tasks) {
-				alert(texts.invalidFile);
-				return;
-			}
-
-			columnList = data.columns;
-			taskList = data.tasks;
-
-			saveToStorage();
-			renderBoard();
-
-			alert(texts.importSuccess);
-		} catch (err) {
-			alert(texts.fileReadError + err.message);
-		}
+	return {
+		columns: data.columns.map((c) => ({ id: c.id, name: c.name })),
+		tasks: data.tasks.map((t) => ({
+			id: t.id,
+			title: t.title,
+			columnId: t.columnId,
+			completed: t.completed === true,
+		})),
 	};
+}
+
+// Import data from a JSON file
+function importTasks(file) {
+	const reader = new FileReader();
+
+	reader.onload = async (e) => {
+		let imported = null;
+		try {
+			imported = parseImportData(JSON.parse(e.target.result));
+		} catch (err) {
+			showToast("Error leyendo el archivo");
+			return;
+		}
+
+		if (!imported) {
+			showToast("Archivo inválido");
+			return;
+		}
+
+		const confirmed = await openDialog({
+			title: "Importar datos",
+			message: "Esto reemplazará todas tus listas y tareas actuales.",
+			confirmText: "Importar",
+			danger: true,
+		});
+		if (!confirmed) return;
+
+		columnList = imported.columns;
+		taskList = imported.tasks;
+		saveToStorage();
+		renderBoard();
+		showToast("Importación completa");
+	};
+
+	reader.onerror = () => showToast("Error leyendo el archivo");
 	reader.readAsText(file);
 }
 
-// Load data and render on page load
-loadFromStorage();
-renderBoard();
-syncTasksToSW(taskList);
+const fileInput = document.getElementById("fileInput");
 
+document.getElementById("importBtn").addEventListener("click", () => fileInput.click());
+document.getElementById("exportBtn").addEventListener("click", exportTasks);
+
+fileInput.addEventListener("change", (e) => {
+	const file = e.target.files[0];
+
+	// Reset the file input
+	e.target.value = "";
+
+	if (file) importTasks(file);
+});
+
+// Settings screen elements
+const settingsScreen = document.getElementById("settingsScreen");
+const settingsLists = document.getElementById("settingsLists");
+
+// Render the list rows in settings
+function renderSettingsLists() {
+	settingsLists.innerHTML = "";
+
+	if (columnList.length === 0) {
+		const empty = document.createElement("p");
+		empty.classList.add("settings-empty");
+		empty.textContent = "No tienes listas";
+		settingsLists.appendChild(empty);
+		return;
+	}
+
+	columnList.forEach((column) => {
+		const row = document.createElement("div");
+		row.classList.add("settings-row");
+
+		const input = document.createElement("input");
+		input.classList.add("settings-input");
+		input.type = "text";
+		input.maxLength = 40;
+		input.value = column.name;
+		input.setAttribute("aria-label", "Nombre de la lista");
+
+		input.addEventListener("keydown", (e) => {
+			if (e.key === "Enter") input.blur();
+		});
+
+		// Rename the list
+		input.addEventListener("blur", () => {
+			const value = input.value.trim() || DEFAULT_COLUMN_NAME;
+			input.value = value;
+			column.name = value;
+			saveToStorage();
+			renderTabs();
+		});
+
+		const deleteBtn = document.createElement("button");
+		deleteBtn.classList.add("settings-icon-btn");
+		deleteBtn.setAttribute("aria-label", "Eliminar lista");
+		deleteBtn.innerHTML = `<img src="./assets/icons/trash.svg" alt="">`;
+		deleteBtn.addEventListener("click", () => deleteColumn(column.id));
+
+		row.append(input, deleteBtn);
+		settingsLists.appendChild(row);
+	});
+}
+
+// Slide the settings screen in
+function openSettings() {
+	renderSettingsLists();
+	settingsScreen.scrollTop = 0;
+	settingsScreen.inert = false;
+	settingsScreen.classList.add("open");
+	document.body.classList.add("settings-open");
+}
+
+// Slide the settings screen out
+function closeSettings() {
+	document.activeElement?.blur();
+	settingsScreen.inert = true;
+	settingsScreen.classList.remove("open");
+	document.body.classList.remove("settings-open");
+}
+
+document.getElementById("settingsBtn").addEventListener("click", openSettings);
+document.getElementById("settingsBack").addEventListener("click", closeSettings);
+
+document.addEventListener("keydown", (e) => {
+	const dialogOpen = modalOverlay.classList.contains("visible");
+	if (e.key === "Escape" && !dialogOpen && settingsScreen.classList.contains("open")) {
+		closeSettings();
+	}
+});
+
+// Search tasks while typing
+searchInput.addEventListener("input", () => {
+	searchQuery = normalizeText(searchInput.value.trim());
+	searchClear.hidden = !searchInput.value;
+	renderBoard();
+});
+
+searchInput.addEventListener("keydown", (e) => {
+	if (e.key === "Enter") searchInput.blur();
+});
+
+searchClear.addEventListener("click", () => {
+	searchInput.value = "";
+	searchQuery = "";
+	searchClear.hidden = true;
+	renderBoard();
+	searchInput.focus();
+});
+
+// Counter tiles filter the board
+statTiles.forEach((tile) => {
+	tile.addEventListener("click", () => {
+		filterMode = filterMode === tile.dataset.filter ? "all" : tile.dataset.filter;
+		updateFilterUI();
+		renderBoard();
+	});
+});
+
+// Count one anonymous visit in Supabase
 async function trackProjectActivity(projectName) {
 	try {
 		const { error } = await _supabase.rpc("increment_visit", {
@@ -516,37 +913,16 @@ async function trackProjectActivity(projectName) {
 
 		if (error) throw error;
 	} catch (err) {
-		console.warn("Offline mode");
+		// Ignore tracking errors
 	}
 }
 
-// trackProjectActivity("Kuic");
+// Load data and render on page load
+loadFromStorage();
+renderBoard();
+trackProjectActivity("Kuic");
 
-// Service Worker setup
+// Register the service worker for offline use
 if ("serviceWorker" in navigator) {
-	navigator.serviceWorker
-		.register("./sw.js")
-		.then(() => navigator.serviceWorker.ready)
-		.then((registration) => {
-			if (registration.active) {
-				registration.active.postMessage({
-					type: "CHECK_DEADLINES",
-				});
-			}
-		})
-		.catch(console.error);
-}
-
-// Sync tasks to Service Worker
-function syncTasksToSW(taskList) {
-	if (!("serviceWorker" in navigator)) return;
-
-	navigator.serviceWorker.ready.then((registration) => {
-		if (registration.active) {
-			registration.active.postMessage({
-				type: "SYNC_TASKS",
-				tasks: taskList,
-			});
-		}
-	});
+	navigator.serviceWorker.register("./sw.js").catch(console.error);
 }

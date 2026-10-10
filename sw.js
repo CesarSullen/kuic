@@ -1,5 +1,5 @@
-const CACHE_NAME = "kanban-static-v6.7.6";
-const DATA_CACHE_NAME = "kanban-data-v5.1";
+// Cache version
+const CACHE_NAME = "kuic-static-v1.0.0";
 
 const STATIC_ASSETS = [
 	// Page
@@ -19,6 +19,11 @@ const STATIC_ASSETS = [
 	"./assets/icons/logo-no-bg.png",
 	"./assets/icons/logo.png",
 	"./assets/icons/plus.svg",
+	"./assets/icons/search.svg",
+	"./assets/icons/gear-six.svg",
+	"./assets/icons/caret-left.svg",
+	"./assets/icons/caret-right.svg",
+	"./assets/icons/x-circle-fill.svg",
 	"./assets/icons/trash.svg",
 
 	// Screenshots
@@ -48,7 +53,7 @@ self.addEventListener("activate", (event) => {
 			const keys = await caches.keys();
 			await Promise.all(
 				keys
-					.filter((k) => k !== CACHE_NAME && k !== DATA_CACHE_NAME)
+					.filter((k) => k !== CACHE_NAME)
 					.map((k) => caches.delete(k)),
 			);
 
@@ -66,6 +71,9 @@ self.addEventListener("fetch", (event) => {
 			return (
 				cached ||
 				fetch(event.request).then((networkResponse) => {
+					// Cache only successful responses
+					if (!networkResponse.ok) return networkResponse;
+
 					return caches.open(CACHE_NAME).then((cache) => {
 						cache.put(event.request, networkResponse.clone());
 						return networkResponse;
@@ -75,61 +83,3 @@ self.addEventListener("fetch", (event) => {
 		}),
 	);
 });
-
-// Receive tasks from app
-self.addEventListener("message", async (event) => {
-	if (!event.data) return;
-
-	if (event.data.type === "SYNC_TASKS") {
-		const cache = await caches.open(DATA_CACHE_NAME);
-		await cache.put(
-			"./tasks-data",
-			new Response(JSON.stringify({ tasks: event.data.tasks })),
-		);
-	}
-
-	if (event.data.type === "CHECK_DEADLINES") {
-		await checkTaskDeadlines();
-	}
-});
-
-// Check deadlines & notify
-async function checkTaskDeadlines() {
-	try {
-		const cache = await caches.open(DATA_CACHE_NAME);
-		const response = await cache.match("./tasks-data");
-		if (!response) return;
-
-		const { tasks } = await response.json();
-		const now = Date.now();
-
-		let updated = false;
-
-		for (const task of tasks) {
-			if (
-				task &&
-				task.deadline &&
-				!task.completed &&
-				!task.notified &&
-				new Date(task.deadline).getTime() <= now
-			) {
-				await self.registration.showNotification("Kuic Tasks", {
-					body: task.title,
-					icon: "./assets/icons/logo-no-bg.png",
-					badge: "./assets/icons/logo-no-bg.png",
-					tag: `task-${task.id}`,
-					requireInteraction: true,
-				});
-
-				task.notified = true;
-				updated = true;
-			}
-		}
-
-		if (updated) {
-			await cache.put("./tasks-data", new Response(JSON.stringify({ tasks })));
-		}
-	} catch (err) {
-		console.error("Deadline check error:", err);
-	}
-}

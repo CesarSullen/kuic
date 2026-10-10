@@ -1,5 +1,5 @@
 <!doctype html>
-<html lang="en">
+<html lang="es">
 	<head>
 		<meta charset="UTF-8" />
 		<meta
@@ -8,7 +8,7 @@
 		/>
 
 		<meta property="og:title" content="Kuic" />
-		<meta property="og:description" content="A privacy-focused kanban-board" />
+		<meta property="og:description" content="A privacy-focused task list app" />
 		<meta property="og:type" content="website" />
 		<meta property="og:image" content="./assets/opengraph.png" />
 
@@ -34,14 +34,19 @@
 		<title>Kuic Tasks</title>
 	</head>
 	<body id="body" class="body">
-		<button class="floating-btn" id="newColumnBtn">
-			<img src="./assets/icons/plus.svg" />
+		<button class="floating-btn" id="addTaskBtn" aria-label="Nueva tarea">
+			<img src="./assets/icons/plus.svg" alt="" />
 		</button>
-		<header class="panel-header">
-			<h1 class="panel-title">KUIC</h1>
+
+		<div class="app-content" id="appContent">
+			<header class="panel-header">
+				<h1 class="panel-title">KUIC</h1>
+				<button class="settings-btn" id="settingsBtn" aria-label="Ajustes">
+					<img src="./assets/icons/gear-six.svg" alt="" />
+				</button>
 
 			<div class="task-stats">
-				<div class="task-stat">
+				<button class="task-stat" data-filter="pending">
 					<div class="stat-header">
 						<img
 							class="stat-icon"
@@ -51,9 +56,9 @@
 						<span class="tasks-pending-number stat-number">0</span>
 					</div>
 					<span class="stat-label">Pendientes</span>
-				</div>
+				</button>
 
-				<div class="task-stat">
+				<button class="task-stat" data-filter="completed">
 					<div class="stat-header">
 						<img
 							class="stat-icon"
@@ -63,43 +68,110 @@
 						<span class="tasks-completed-number stat-number">0</span>
 					</div>
 					<span class="stat-label">Completadas</span>
+				</button>
+			</div>
+
+			<div class="search-bar">
+				<img class="search-icon" src="./assets/icons/search.svg" alt="" />
+				<input
+					class="search-input"
+					id="searchInput"
+					type="search"
+					placeholder="Buscar"
+					autocomplete="off"
+					enterkeyhint="search"
+				/>
+				<button class="search-clear" id="searchClear" aria-label="Borrar búsqueda" hidden>
+					<img src="./assets/icons/x-circle-fill.svg" alt="" />
+				</button>
+			</div>
+			</header>
+
+			<nav class="list-tabs" id="listTabs" aria-label="Listas"></nav>
+
+			<main class="task-board"></main>
+		</div>
+
+		<input type="file" id="fileInput" hidden accept="application/json" />
+
+		<div class="settings-screen" id="settingsScreen" role="dialog" aria-label="Ajustes" inert>
+			<div class="settings-inner">
+				<div class="settings-topbar">
+					<button class="settings-back" id="settingsBack" aria-label="Volver">
+						<img src="./assets/icons/caret-left.svg" alt="" />
+					</button>
+					<h2 class="settings-heading">Ajustes</h2>
+				</div>
+
+				<h3 class="settings-section-title">Listas</h3>
+				<div class="settings-group" id="settingsLists"></div>
+
+				<h3 class="settings-section-title">Datos</h3>
+				<div class="data-buttons">
+					<button class="btn data-btn" id="importBtn">
+						<img src="./assets/icons/cloud-arrow-down-fill.svg" class="btn-icon" alt="" />
+						<span>Importar</span>
+					</button>
+					<button class="btn data-btn" id="exportBtn">
+						<img src="./assets/icons/cloud-arrow-up-fill.svg" class="btn-icon" alt="" />
+						<span>Exportar</span>
+					</button>
+				</div>
+
+				<h3 class="settings-section-title">Acerca de</h3>
+				<div class="settings-group">
+					<a class="settings-row settings-link" href="https://cesarsullen.github.io" target="_blank" rel="noopener noreferrer">
+						<span>Sobre el desarrollador</span>
+						<img src="./assets/icons/caret-right.svg" alt="" />
+					</a>
+					<a class="settings-row settings-link" href="https://cesarsullen.github.io/views/pwa-install" target="_blank" rel="noopener noreferrer">
+						<span>¿Cómo instalar?</span>
+						<img src="./assets/icons/caret-right.svg" alt="" />
+					</a>
+					<a class="settings-row settings-link" href="https://cesarsullen.github.io/views/donations" target="_blank" rel="noopener noreferrer">
+						<span>Apóyame</span>
+						<img src="./assets/icons/caret-right.svg" alt="" />
+					</a>
+				</div>
+
+				<p class="settings-version">Kuic v1.0.0</p>
+			</div>
+		</div>
+
+		<div class="modal-overlay" id="modalOverlay" inert>
+			<div
+				class="modal"
+				role="dialog"
+				aria-modal="true"
+				aria-labelledby="modalTitle"
+			>
+				<h2 class="modal-title" id="modalTitle"></h2>
+				<p class="modal-message" id="modalMessage"></p>
+				<input
+					class="modal-input"
+					id="modalInput"
+					type="text"
+					maxlength="40"
+					placeholder="Nombre de la lista"
+					autocomplete="off"
+				/>
+				<div class="modal-actions">
+					<button class="btn modal-btn modal-cancel" id="modalCancel">
+						Cancelar
+					</button>
+					<button class="btn modal-btn modal-confirm" id="modalConfirm">
+						Aceptar
+					</button>
 				</div>
 			</div>
-		</header>
-
-		<input
-			type="file"
-			id="fileInput"
-			style="display: none"
-			accept="application/json"
-			onchange="importTasks(event)"
-		/>
-
-		<main class="kanban-board"></main>
-
-		<div class="data-buttons">
-			<button class="btn data-btn" id="importBtn">
-				<img src="./assets/icons/cloud-arrow-down-fill.svg" class="btn-icon" />
-				<span id="importBtnText">Import</span>
-			</button>
-			<button onclick="exportTasks()" class="btn data-btn">
-				<img src="./assets/icons/cloud-arrow-up-fill.svg" class="btn-icon" />
-				<span id="exportBtnText">Export</span>
-			</button>
 		</div>
-		<footer>
-			<div class="footer-content">
-				<nav class="footer-links">
-					<a href="https://cesarsullen.github.io">About the Developer</a>
-					<a href="https://cesarsullen.github.io/views/pwa-install"
-						>How to Install?</a
-					>
-					<a href="https://cesarsullen.github.io/views/donations">Support Me</a>
-				</nav>
-			</div>
-		</footer>
+		<div class="toast" id="toast" role="status" aria-live="polite">
+			<span id="toastText"></span>
+			<button class="toast-action" id="toastAction" hidden></button>
+		</div>
+
 		<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 		<script src="./js/supabase-config.js"></script>
-		<script src="js/main.js"></script>
+		<script src="./js/main.js"></script>
 	</body>
 </html>
