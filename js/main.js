@@ -169,6 +169,7 @@ function setupSwipe(card, content, deleteBtn, title) {
 	let currentX = 0;
 	let axis = null;
 	let tracking = false;
+	let swiped = false;
 
 	const revealWidth = () => deleteBtn.offsetWidth;
 
@@ -176,10 +177,11 @@ function setupSwipe(card, content, deleteBtn, title) {
 		setOpen(false);
 	}
 
-	// Open or close the delete area
-	function setOpen(open) {
+	// Open or close the delete area, with a springy bounce when it settles open after a stretch
+	function setOpen(open, bounce = false) {
 		card.classList.remove("swiping");
 		card.classList.toggle("open", open);
+		content.style.transition = bounce ? "transform 0.55s cubic-bezier(0.34, 1.56, 0.64, 1)" : "";
 		content.style.transform = open ? `translateX(-${revealWidth()}px)` : "";
 
 		if (open) {
@@ -192,7 +194,7 @@ function setupSwipe(card, content, deleteBtn, title) {
 
 	card.addEventListener("pointerdown", (e) => {
 		if (!e.isPrimary || (e.pointerType === "mouse" && e.button !== 0)) return;
-		if (e.target.closest("button") || document.activeElement === title) return;
+		if (e.target.closest(".delete-btn-icon") || document.activeElement === title) return;
 		if (e.pointerType === "mouse" && e.target.closest(".task-title")) return;
 
 		startX = e.clientX;
@@ -208,28 +210,48 @@ function setupSwipe(card, content, deleteBtn, title) {
 		const dx = e.clientX - startX;
 		const dy = e.clientY - startY;
 
-		// Lock gesture direction
+		// Lock gesture direction, diagonal swipes still count as horizontal
 		if (!axis) {
-			if (Math.abs(dx) < 8 && Math.abs(dy) < 8) return;
-			axis = Math.abs(dx) > Math.abs(dy) ? "x" : "y";
+			if (Math.abs(dx) < 6 && Math.abs(dy) < 6) return;
+			axis = Math.abs(dx) * 1.2 > Math.abs(dy) ? "x" : "y";
 			if (axis === "x") {
-				card.setPointerCapture(e.pointerId);
+				swiped = true;
+				content.style.transition = "";
 				card.classList.add("swiping");
+				try {
+					card.setPointerCapture(e.pointerId);
+				} catch (err) {
+					// Touch pointers are already captured by the card
+				}
 			}
 		}
 		if (axis !== "x") return;
 
-		currentX = Math.min(0, Math.max(-revealWidth(), baseX + dx));
+		// The card follows the finger all the way, so it stretches past the delete area
+		currentX = Math.min(0, Math.max(-card.offsetWidth, baseX + dx));
 		content.style.transform = `translateX(${currentX}px)`;
 	});
+
+	// Keep the page from scrolling once a horizontal swipe started, even if the finger drifts up or down
+	card.addEventListener(
+		"touchmove",
+		(e) => {
+			if (axis === "x" && e.cancelable) e.preventDefault();
+		},
+		{ passive: false },
+	);
 
 	const endGesture = (e) => {
 		if (!tracking) return;
 		tracking = false;
 
+		// A tap right after a swipe must not toggle the checkbox
+		if (swiped) setTimeout(() => (swiped = false), 300);
+
 		if (axis === "x") {
-			// Snap open or closed
-			setOpen(currentX < -revealWidth() / 2);
+			// Snap open (with a bounce) or closed
+			const shouldOpen = currentX < -revealWidth() / 2;
+			setOpen(shouldOpen, shouldOpen);
 		} else if (axis === null && e.type === "pointerup" && card.classList.contains("open")) {
 			// Tapping an opened card closes it
 			setOpen(false);
@@ -239,6 +261,8 @@ function setupSwipe(card, content, deleteBtn, title) {
 
 	card.addEventListener("pointerup", endGesture);
 	card.addEventListener("pointercancel", endGesture);
+
+	return { wasSwiped: () => swiped };
 }
 
 // Create a task card element
@@ -292,6 +316,8 @@ function createTaskCard(task) {
 	});
 
 	completeBtn.addEventListener("click", () => {
+		if (swipe.wasSwiped()) return;
+
 		// Toggle completed state in place
 		task.completed = !task.completed;
 		card.classList.toggle("completed", task.completed);
@@ -315,7 +341,7 @@ function createTaskCard(task) {
 
 	deleteBtn.addEventListener("click", () => deleteTask(task));
 
-	setupSwipe(card, content, deleteBtn, title);
+	const swipe = setupSwipe(card, content, deleteBtn, title);
 
 	// Play the entrance animation for new tasks
 	if (task.id === lastCreatedTaskId) {
@@ -802,6 +828,81 @@ fileInput.addEventListener("change", (e) => {
 const settingsScreen = document.getElementById("settingsScreen");
 const settingsLists = document.getElementById("settingsLists");
 
+// Let a list row be dragged up or down by its handle, the new order is saved when it is dropped
+function setupListReorder(row, handle) {
+	handle.addEventListener("pointerdown", (e) => {
+		if (!e.isPrimary || (e.pointerType === "mouse" && e.button !== 0)) return;
+		e.preventDefault();
+		handle.setPointerCapture(e.pointerId);
+
+		let startY = e.clientY;
+		row.classList.add("dragging");
+		settingsLists.classList.add("reordering");
+
+		const onMove = (ev) => {
+			row.style.transform = `translateY(${ev.clientY - startY}px)`;
+
+			// Swap places with a neighbour when the dragged row crosses its middle
+			const center = row.getBoundingClientRect().top + row.offsetHeight / 2;
+			const prev = row.previousElementSibling;
+			const next = row.nextElementSibling;
+			let neighbour = null;
+
+			if (prev) {
+				const rect = prev.getBoundingClientRect();
+				if (center < rect.top + rect.height / 2) neighbour = prev;
+			}
+			if (!neighbour && next) {
+				const rect = next.getBoundingClientRect();
+				if (center > rect.top + rect.height / 2) neighbour = next;
+			}
+			if (!neighbour) return;
+
+			const rowTop = row.getBoundingClientRect().top;
+			const neighbourTop = neighbour.getBoundingClientRect().top;
+
+			if (neighbour === prev) {
+				settingsLists.insertBefore(row, prev);
+			} else {
+				settingsLists.insertBefore(row, next.nextElementSibling);
+			}
+
+			// Keep the dragged row under the finger after the layout shifted
+			startY += row.getBoundingClientRect().top - rowTop;
+			row.style.transform = `translateY(${ev.clientY - startY}px)`;
+
+			// Slide the neighbour into its new place instead of jumping
+			const delta = neighbourTop - neighbour.getBoundingClientRect().top;
+			neighbour.style.transition = "none";
+			neighbour.style.transform = `translateY(${delta}px)`;
+			neighbour.getBoundingClientRect();
+			neighbour.style.transition = "";
+			neighbour.style.transform = "";
+		};
+
+		const onEnd = () => {
+			handle.removeEventListener("pointermove", onMove);
+			handle.removeEventListener("pointerup", onEnd);
+			handle.removeEventListener("pointercancel", onEnd);
+
+			// Glide the row into its slot
+			row.classList.remove("dragging");
+			row.style.transform = "";
+			setTimeout(() => settingsLists.classList.remove("reordering"), 300);
+
+			// Apply the new order to the lists and the main screen
+			const order = [...settingsLists.querySelectorAll(".settings-row")].map((r) => r.dataset.columnId);
+			columnList.sort((a, b) => order.indexOf(a.id) - order.indexOf(b.id));
+			saveToStorage();
+			renderBoard();
+		};
+
+		handle.addEventListener("pointermove", onMove);
+		handle.addEventListener("pointerup", onEnd);
+		handle.addEventListener("pointercancel", onEnd);
+	});
+}
+
 // Render the list rows in settings
 function renderSettingsLists() {
 	settingsLists.innerHTML = "";
@@ -816,7 +917,14 @@ function renderSettingsLists() {
 
 	columnList.forEach((column) => {
 		const row = document.createElement("div");
-		row.classList.add("settings-row");
+		row.classList.add("settings-row", "settings-reorder-row");
+		row.dataset.columnId = column.id;
+
+		const handle = document.createElement("button");
+		handle.classList.add("settings-handle");
+		handle.setAttribute("aria-label", "Reordenar lista");
+		handle.innerHTML = `<img src="./assets/icons/dots-six-vertical.svg" alt="">`;
+		setupListReorder(row, handle);
 
 		const input = document.createElement("input");
 		input.classList.add("settings-input");
@@ -844,7 +952,7 @@ function renderSettingsLists() {
 		deleteBtn.innerHTML = `<img src="./assets/icons/trash.svg" alt="">`;
 		deleteBtn.addEventListener("click", () => deleteColumn(column.id));
 
-		row.append(input, deleteBtn);
+		row.append(handle, input, deleteBtn);
 		settingsLists.appendChild(row);
 	});
 }
