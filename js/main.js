@@ -68,23 +68,90 @@ function generateId() {
 	return `${Date.now()}-${Math.random().toString(36).slice(2)}`;
 }
 
+// False when saved data could not be read, so defaults never overwrite it
+let storageWritable = true;
+
+// Last serialized data we know is in localStorage
+let lastSavedJson = "";
+
 // Save data to localStorage
 function saveToStorage() {
-	localStorage.setItem("columns", JSON.stringify(columnList));
-	localStorage.setItem("tasks", JSON.stringify(taskList));
-}
+	if (!storageWritable) return;
 
-// Load data from localStorage
-function loadFromStorage() {
 	try {
-		const savedColumns = localStorage.getItem("columns");
-		const savedTasks = localStorage.getItem("tasks");
-		if (savedColumns) columnList = JSON.parse(savedColumns);
-		if (savedTasks) taskList = JSON.parse(savedTasks);
+		const columnsJson = JSON.stringify(columnList);
+		const tasksJson = JSON.stringify(taskList);
+		localStorage.setItem("columns", columnsJson);
+		localStorage.setItem("tasks", tasksJson);
+		lastSavedJson = columnsJson + tasksJson;
 	} catch (err) {
-		console.error("Could not read saved data:", err);
+		console.error("Could not save data:", err);
+		showToast("No se pudo guardar. Revisa el espacio disponible");
 	}
 }
+
+// Read a saved JSON array, keeping a backup of anything unreadable
+function readSavedArray(key) {
+	const raw = localStorage.getItem(key);
+	if (raw === null) return null;
+
+	try {
+		const value = JSON.parse(raw);
+		if (Array.isArray(value)) return value;
+		throw new Error("Not an array");
+	} catch (err) {
+		console.error(`Could not read "${key}":`, err);
+		try {
+			localStorage.setItem(`${key}_corrupt_backup`, raw);
+		} catch (e) {
+			// Nothing else we can do
+		}
+		throw err;
+	}
+}
+
+// Load data from localStorage, returns true if the data changed
+function loadFromStorage() {
+	try {
+		const savedColumns = readSavedArray("columns");
+		const savedTasks = readSavedArray("tasks");
+
+		// Only replace the in-memory data when there is something saved
+		if (savedColumns) columnList = savedColumns;
+		if (savedTasks) taskList = savedTasks;
+		storageWritable = true;
+
+		const json = JSON.stringify(columnList) + JSON.stringify(taskList);
+		const changed = lastSavedJson !== "" && json !== lastSavedJson;
+		lastSavedJson = json;
+		return changed;
+	} catch (err) {
+		// Do not save over data we could not read
+		storageWritable = false;
+		return false;
+	}
+}
+
+// Re-read the data when another window or a resumed app has newer data,
+// so a stale copy never overwrites newer tasks
+function syncFromStorage() {
+	// Do not rebuild the board under a title that is being edited
+	if (document.activeElement?.classList.contains("task-title")) return;
+	if (loadFromStorage()) {
+		renderBoard();
+		if (settingsScreen.classList.contains("open")) renderSettingsLists();
+	}
+}
+
+window.addEventListener("storage", (e) => {
+	if (e.key === "columns" || e.key === "tasks" || e.key === null) syncFromStorage();
+});
+document.addEventListener("visibilitychange", () => {
+	if (document.visibilityState === "visible") syncFromStorage();
+});
+window.addEventListener("pageshow", (e) => {
+	if (e.persisted) syncFromStorage();
+});
 
 // Reorder tasks when toggling completed state
 function reorderTasks(task) {
@@ -265,6 +332,28 @@ function setupSwipe(card, content, deleteBtn, title) {
 	return { wasSwiped: () => swiped };
 }
 
+// Move a completed task after a short delay, never while the user is typing
+// (rebuilding the board would drop the focus and the text being written)
+function scheduleReorder(task, delay = REORDER_DELAY) {
+	clearTimeout(reorderTimers.get(task.id));
+	reorderTimers.set(
+		task.id,
+		setTimeout(() => {
+			reorderTimers.delete(task.id);
+			if (!taskList.includes(task)) return;
+
+			if (document.activeElement?.classList.contains("task-title")) {
+				scheduleReorder(task, 400);
+				return;
+			}
+
+			reorderTasks(task);
+			saveToStorage();
+			renderBoardAnimated();
+		}, delay),
+	);
+}
+
 // Create a task card element
 function createTaskCard(task) {
 	const card = document.createElement("div");
@@ -325,18 +414,7 @@ function createTaskCard(task) {
 		updateTaskCounters();
 
 		// Move the task after a short delay
-		clearTimeout(reorderTimers.get(task.id));
-		reorderTimers.set(
-			task.id,
-			setTimeout(() => {
-				reorderTimers.delete(task.id);
-				if (!taskList.includes(task)) return;
-
-				reorderTasks(task);
-				saveToStorage();
-				renderBoardAnimated();
-			}, REORDER_DELAY),
-		);
+		scheduleReorder(task);
 	});
 
 	deleteBtn.addEventListener("click", () => deleteTask(task));
@@ -1013,9 +1091,13 @@ statTiles.forEach((tile) => {
 });
 
 // Count one anonymous visit in Supabase
+// It runs after the app is on screen and never blocks or breaks it
 async function trackProjectActivity(projectName) {
+	if (!navigator.onLine) return;
+
 	try {
-		const { error } = await _supabase.rpc("increment_visit", {
+		const client = await loadSupabaseClient();
+		const { error } = await client.rpc("increment_visit", {
 			name_param: projectName,
 		});
 
@@ -1025,10 +1107,45 @@ async function trackProjectActivity(projectName) {
 	}
 }
 
+// Handle shortcuts and shared text (?action=new, ?action=settings, ?text=...)
+function handleLaunchParams() {
+	const params = new URLSearchParams(location.search);
+	if (![...params.keys()].length) return;
+
+	const action = params.get("action");
+	const shared = [params.get("title"), params.get("text"), params.get("url")]
+		.filter(Boolean)
+		.join(" ")
+		.trim();
+
+	// Clean the address so a reload does not repeat the action
+	history.replaceState(null, "", location.pathname + location.hash);
+
+	if (shared && activeColumnId) {
+		taskList.push({
+			id: generateId(),
+			title: shared.slice(0, 500),
+			columnId: activeColumnId,
+			completed: false,
+		});
+		saveToStorage();
+		renderBoard();
+		showToast("Tarea añadida");
+	} else if (action === "new") {
+		if (activeColumnId) addTaskToColumn(activeColumnId);
+		else createList();
+	} else if (action === "settings") {
+		openSettings();
+	}
+}
+
 // Load data and render on page load
 loadFromStorage();
 renderBoard();
-trackProjectActivity("Kuic");
+handleLaunchParams();
+
+// Track the visit once the page finished loading
+window.addEventListener("load", () => setTimeout(() => trackProjectActivity("Kuic"), 1500));
 
 // Register the service worker for offline use
 if ("serviceWorker" in navigator) {

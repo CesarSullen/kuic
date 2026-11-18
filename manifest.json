@@ -1,18 +1,47 @@
 {
+	"id": "/kuic/",
 	"name": "Kuic Tasks",
 	"short_name": "Kuic",
-	"description": "Simple task list app built with vanilla JavaScript.",
-	"start_url": "./index.html",
-	"display": "standalone",
+	"description": "Lista de tareas privada que funciona sin conexión.",
+	"lang": "es",
+	"dir": "ltr",
+	"start_url": "./",
 	"scope": "./",
+	"display": "standalone",
+	"display_override": ["standalone", "minimal-ui"],
+	"orientation": "portrait",
 	"background_color": "#101010",
 	"theme_color": "#101010",
+	"categories": ["productivity", "utilities"],
+	"launch_handler": {
+		"client_mode": "focus-existing"
+	},
+	"prefer_related_applications": false,
+	"related_applications": [],
 	"icons": [
+		{
+			"src": "./assets/icons/icon-192.png",
+			"sizes": "192x192",
+			"type": "image/png",
+			"purpose": "any"
+		},
+		{
+			"src": "./assets/icons/icon-512.png",
+			"sizes": "512x512",
+			"type": "image/png",
+			"purpose": "any"
+		},
 		{
 			"src": "./assets/icons/logo.png",
 			"sizes": "1024x1024",
 			"type": "image/png",
 			"purpose": "any"
+		},
+		{
+			"src": "./assets/icons/icon-512-maskable.png",
+			"sizes": "512x512",
+			"type": "image/png",
+			"purpose": "maskable"
 		}
 	],
 	"screenshots": [
@@ -21,21 +50,43 @@
 			"sizes": "750x1334",
 			"type": "image/png",
 			"form_factor": "narrow",
-			"label": "Mobile view 1"
+			"label": "Tus tareas organizadas en listas"
 		},
 		{
 			"src": "./assets/screenshots/mobile-2.png",
 			"sizes": "750x1334",
 			"type": "image/png",
 			"form_factor": "narrow",
-			"label": "Mobile view 2"
+			"label": "Vista de Kuic en el móvil"
 		},
 		{
-			"src": "./assets/screenshots/desktop-1.png",
-			"sizes": "2048x2732",
+			"src": "./assets/screenshots/desktop-wide.png",
+			"sizes": "1280x720",
 			"type": "image/png",
 			"form_factor": "wide",
-			"label": "Desktop view"
+			"label": "Kuic en escritorio"
 		}
-	]
+	],
+	"shortcuts": [
+		{
+			"name": "Nueva tarea",
+			"short_name": "Nueva",
+			"url": "./?action=new",
+			"icons": [{ "src": "./assets/icons/icon-192.png", "sizes": "192x192", "type": "image/png" }]
+		},
+		{
+			"name": "Ajustes",
+			"url": "./?action=settings",
+			"icons": [{ "src": "./assets/icons/icon-192.png", "sizes": "192x192", "type": "image/png" }]
+		}
+	],
+	"share_target": {
+		"action": "./",
+		"method": "GET",
+		"params": {
+			"title": "title",
+			"text": "text",
+			"url": "url"
+		}
+	}
 }
