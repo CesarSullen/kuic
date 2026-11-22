@@ -1,5 +1,5 @@
 // Cache version
-const CACHE_NAME = "kuic-1.0.3";
+const CACHE_NAME = "kuic-1.0.4";
 
 const STATIC_ASSETS = [
   // Page

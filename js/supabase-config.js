@@ -1,8 +1,8 @@
-const SUPABASE_URL = "https://eagwosdtokwxicicvkqf.supabase.co";
-const SUPABASE_KEY = "sb_publishable_L52lco6_z5_FnmF4lwe-Lg_uX_QNkGm";
-const SUPABASE_SDK = "https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2";
+const SUPABASE_URL = "https://iyitiknnrcsmbwwwwolu.supabase.co";
+const SUPABASE_KEY = "sb_publishable_WdjU1jQEjusa7dt-3hERYQ__GSokW1B";
+const SUPABASE_SDK = "./js/supabase.js";
 
-// Load the Supabase SDK on demand, so a slow or blocked CDN never delays the app
+// Load the self-hosted Supabase SDK on demand, so it never delays the app
 function loadSupabaseClient(timeoutMs = 8000) {
 	return new Promise((resolve, reject) => {
 		if (window.supabase) return resolve(window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY));
